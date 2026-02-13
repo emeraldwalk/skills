@@ -22,7 +22,7 @@ class TaskManager:
         return os.path.join(TASKS_DIR, list_name)
 
     def _get_list_path(self, list_name):
-        return os.path.join(self._get_list_dir(list_name), "task-list.json")
+        return os.path.join(self._get_list_dir(list_name), "_task-list.json")
 
     def _get_log_path(self, list_name):
         return os.path.join(self._get_list_dir(list_name), "status-log.jsonl")
