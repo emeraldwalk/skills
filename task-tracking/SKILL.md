@@ -5,7 +5,9 @@ description: Task management and tracking for agents. Use this skill whenever yo
 
 # Task Tracking Skill
 
-This skill enables agents to manage tasks using the bundled Python script `scripts/task_tracking.py`.
+This skill enables agents to manage tasks using the bundled Python script `task_tracking.py`, located in the skill's `scripts` folder.
+
+> **Note:** The script is bundled with the skill. All references in this documentation use the script name only; agents should resolve the path to the script within the skill's `scripts` directory as appropriate for their environment.
 
 > **Discovery:** Agents should use `python scripts/task_tracking.py --help` to discover all available commands and options. Do not read the script source directly; rely on the CLI help output for authoritative usage and argument details.
 
@@ -30,7 +32,7 @@ This skill enables agents to manage tasks using the bundled Python script `scrip
 
 ## Script Reference
 
-See `scripts/task_tracking.py` for full CLI and API details. The script manages task lists and individual tasks in the `.tasks` directory of the current working directory. All operations are performed via the CLI interface.
+See `task_tracking.py` for full CLI and API details. The script manages task lists and individual tasks in the `.tasks` directory of the current working directory. All operations are performed via the CLI interface.
 
 - Task statuses: `todo`, `completed`, `failed`, etc.
 - Each task requires a `context` string for creation.
@@ -41,7 +43,3 @@ See `scripts/task_tracking.py` for full CLI and API details. The script manages 
 - Always provide meaningful context for each task.
 - Use agent IDs to claim tasks for specific agents.
 - Log progress and errors using the `update-task` command with notes.
-
-## Advanced Usage
-
-For advanced workflows, refer to the script source or extend the script as needed. If you need to patch or debug, read `scripts/task_tracking.py` directly.
