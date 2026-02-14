@@ -1,3 +1,20 @@
+# Helper: Parse add-task flags (no logic change)
+parse_add_task_flags() {
+  # expects all args as "$@"; sets ac_items, ctx_docs, ctx_files, ctx_skills, verify_command, verify_instruction
+  ac_items=() ctx_docs=() ctx_files=() ctx_skills=()
+  verify_command="" verify_instruction=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --ac) ac_items+=("$2"); shift 2 ;;
+      --doc) ctx_docs+=("$2"); shift 2 ;;
+      --file) ctx_files+=("$2"); shift 2 ;;
+      --skill) ctx_skills+=("$2"); shift 2 ;;
+      --verify-command) verify_command="$2"; shift 2 ;;
+      --verify-instruction) verify_instruction="$2"; shift 2 ;;
+      *) echo "Unknown option: $1"; return 1 ;;
+    esac
+  done
+}
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -46,23 +63,10 @@ cmd_create_list() {
 }
 
 cmd_add_task() {
-  local list_name="$1" description="$2"
-  local verify_command="" verify_instruction=""
-  shift 2
-  local ac_items=() ctx_files=() ctx_docs=() ctx_skills=()
 
-  # Parse flags
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --file) ctx_files+=("$2"); shift 2 ;;
-      --doc) ctx_docs+=("$2"); shift 2 ;;
-      --skill) ctx_skills+=("$2"); shift 2 ;;
-      --ac) ac_items+=("$2"); shift 2 ;;
-      --verify-command) verify_command="$2"; shift 2 ;;
-      --verify-instruction) verify_instruction="$2"; shift 2 ;;
-      *) echo "Unknown option: $1"; return 1 ;;
-    esac
-  done
+  local list_name="$1" description="$2"
+  shift 2
+  parse_add_task_flags "$@"
 
   if [[ -n "$verify_command" && -n "$verify_instruction" ]]; then
     echo "Error: Cannot specify both --verify-command and --verify-instruction."
