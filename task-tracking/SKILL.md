@@ -27,7 +27,7 @@ This skill enables agents to manage tasks using the bundled bash script `task_tr
   ```
 - **Update task status:**
   ```bash
-  bash scripts/task_tracking.sh update-task <list-name> <task-id> <status> --note "<note>"
+  bash scripts/task_tracking.sh update-task <list-name> <task-id> <status> [--note "<note>"] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"]
   ```
 
 ## Script Reference
@@ -40,10 +40,22 @@ See `task_tracking.sh` for full CLI and API details. The script manages task lis
 - `--verify-command` stores `{"type":"command","value":"..."}` — a shell command the agent can execute.
 - `--verify-instruction` stores `{"type":"instruction","value":"..."}` — a free-text instruction for manual verification.
 - Only one of `--verify-command` or `--verify-instruction` may be specified per task.
-- Status updates (except `completed`) require a note.
+- Status updates (except `completed`) require a `--note`.
+- The `update-task` command supports all the same metadata flags as `add-task` (`--file`, `--doc`, `--skill`, `--ac`, `--verify-command`, `--verify-instruction`), allowing you to modify task metadata when updating status.
+
+## Error Handling
+
+**CRITICAL:** If the task tracking script returns an error or fails to execute:
+1. **IMMEDIATELY notify the user** about the error and include the full error message
+2. **DO NOT attempt to modify task files manually** (e.g., editing `.tasks/` directory JSON files directly)
+3. **DO NOT work around the script** by using jq, cat, or other tools to manipulate task data
+4. **WAIT for explicit user instruction** before taking any alternative action
+
+The task tracking system is designed to maintain data integrity through the script interface only. Manual modifications can corrupt the task list, status logs, or task metadata.
 
 ## Best Practices
 
 - Always provide meaningful context for each task.
 - Use agent IDs to claim tasks for specific agents.
 - Log progress and errors using the `update-task` command with notes.
+- If the script fails, stop and notify the user - do not attempt manual workarounds.

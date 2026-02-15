@@ -219,12 +219,27 @@ cmd_update_task() {
   shift 3
   local note=""
 
+  # Parse all flags (including add-task flags and --note)
+  ac_items=() ctx_docs=() ctx_files=() ctx_skills=()
+  verify_command="" verify_instruction=""
+
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --note) note="$2"; shift 2 ;;
+      --ac) ac_items+=("$2"); shift 2 ;;
+      --doc) ctx_docs+=("$2"); shift 2 ;;
+      --file) ctx_files+=("$2"); shift 2 ;;
+      --skill) ctx_skills+=("$2"); shift 2 ;;
+      --verify-command) verify_command="$2"; shift 2 ;;
+      --verify-instruction) verify_instruction="$2"; shift 2 ;;
       *) echo "Unknown option: $1"; return 1 ;;
     esac
   done
+
+  if [[ -n "$verify_command" && -n "$verify_instruction" ]]; then
+    echo "Error: Cannot specify both --verify-command and --verify-instruction."
+    return 1
+  fi
 
   if [[ "$status" != "completed" && -z "$note" ]]; then
     echo "Error: A note is required for non-completed status changes (e.g., error logs or progress updates)."
@@ -258,17 +273,77 @@ cmd_update_task() {
     '(.tasks[] | select(.id == $id)).status = $s' \
     "$path" > "$tmp" && mv "$tmp" "$path"
 
+  # Build update expression for per-task JSON
+  local task_update='.status = $s | .updated = $ts'
+
+  if [[ -n "$note" ]]; then
+    task_update="$task_update"' | .note = $n'
+  else
+    task_update="$task_update"' | .note = null'
+  fi
+
+  # Build JSON arrays if flags provided
+  if [[ ${#ctx_files[@]} -gt 0 ]]; then
+    local files_json
+    files_json=$(printf '%s\n' "${ctx_files[@]}" | jq -R . | jq -s .)
+    task_update="$task_update"' | .context.files = $files'
+  fi
+
+  if [[ ${#ctx_docs[@]} -gt 0 ]]; then
+    local docs_json
+    docs_json=$(printf '%s\n' "${ctx_docs[@]}" | jq -R . | jq -s .)
+    task_update="$task_update"' | .context.docs = $docs'
+  fi
+
+  if [[ ${#ctx_skills[@]} -gt 0 ]]; then
+    local skills_json
+    skills_json=$(printf '%s\n' "${ctx_skills[@]}" | jq -R . | jq -s .)
+    task_update="$task_update"' | .context.skills = $skills'
+  fi
+
+  if [[ ${#ac_items[@]} -gt 0 ]]; then
+    local ac_json
+    ac_json=$(printf '%s\n' "${ac_items[@]}" | jq -R . | jq -s .)
+    task_update="$task_update"' | .acceptance_criteria = $ac'
+  fi
+
+  if [[ -n "$verify_command" ]]; then
+    task_update="$task_update"' | .verification = {type:"command",value:$verify}'
+  elif [[ -n "$verify_instruction" ]]; then
+    task_update="$task_update"' | .verification = {type:"instruction",value:$verify}'
+  fi
+
+  # Build jq command with all args
+  local jq_args=(--arg s "$status" --arg ts "$timestamp")
+
+  if [[ -n "$note" ]]; then
+    jq_args+=(--arg n "$note")
+  fi
+  if [[ ${#ctx_files[@]} -gt 0 ]]; then
+    jq_args+=(--argjson files "$files_json")
+  fi
+  if [[ ${#ctx_docs[@]} -gt 0 ]]; then
+    jq_args+=(--argjson docs "$docs_json")
+  fi
+  if [[ ${#ctx_skills[@]} -gt 0 ]]; then
+    jq_args+=(--argjson skills "$skills_json")
+  fi
+  if [[ ${#ac_items[@]} -gt 0 ]]; then
+    jq_args+=(--argjson ac "$ac_json")
+  fi
+  if [[ -n "$verify_command" ]]; then
+    jq_args+=(--arg verify "$verify_command")
+  elif [[ -n "$verify_instruction" ]]; then
+    jq_args+=(--arg verify "$verify_instruction")
+  fi
+
   # Update per-task JSON (full detail)
   local task_tmp="${task_file}.tmp"
+  jq "${jq_args[@]}" "$task_update" "$task_file" > "$task_tmp" && mv "$task_tmp" "$task_file"
+
   if [[ -n "$note" ]]; then
-    jq --arg s "$status" --arg n "$note" --arg ts "$timestamp" \
-      '.status = $s | .note = $n | .updated = $ts' \
-      "$task_file" > "$task_tmp" && mv "$task_tmp" "$task_file"
     write_log "$list_name" "$task_id" "$status" "$note"
   else
-    jq --arg s "$status" --arg ts "$timestamp" \
-      '.status = $s | .note = null | .updated = $ts' \
-      "$task_file" > "$task_tmp" && mv "$task_tmp" "$task_file"
     write_log "$list_name" "$task_id" "$status"
   fi
 
@@ -283,7 +358,7 @@ Commands:
   create-list <name>
   add-task <list> <desc> [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>]
   next <list> [--skip-failed] [--claim <AGENT_ID>]
-  update-task <list> <task-id> <status> [--note <note>]
+  update-task <list> <task-id> <status> [--note <note>] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>]
 USAGE
 }
 

@@ -312,6 +312,101 @@ lines=$(wc -l < "$(T)/$l/status-log.jsonl" | tr -d ' ')
 assert_eq "2 log entries" "2" "$lines"
 teardown
 
+echo "-- update with context files"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Adding files" \
+  --file "src/new.ts" --file "src/test.ts" >/dev/null
+assert_json_eq "2 files added" "$(T)/$l/task-01.json" ".context.files | length" "2"
+assert_json_eq "first file" "$(T)/$l/task-01.json" ".context.files[0]" "src/new.ts"
+assert_json_eq "second file" "$(T)/$l/task-01.json" ".context.files[1]" "src/test.ts"
+teardown
+
+echo "-- update with docs and skills"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Adding context" \
+  --doc "README.md" --doc "API.md" \
+  --skill "pocketbase-managing" >/dev/null
+assert_json_eq "2 docs" "$(T)/$l/task-01.json" ".context.docs | length" "2"
+assert_json_eq "1 skill" "$(T)/$l/task-01.json" ".context.skills | length" "1"
+assert_json_eq "skill value" "$(T)/$l/task-01.json" ".context.skills[0]" "pocketbase-managing"
+teardown
+
+echo "-- update with acceptance criteria"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Adding AC" \
+  --ac "Tests pass" --ac "Coverage >80%" --ac "No lint errors" >/dev/null
+assert_json_eq "3 ac items" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "3"
+assert_json_eq "first ac" "$(T)/$l/task-01.json" ".acceptance_criteria[0]" "Tests pass"
+assert_json_eq "second ac" "$(T)/$l/task-01.json" ".acceptance_criteria[1]" "Coverage >80%"
+teardown
+
+echo "-- update with verify-command"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Adding verification" \
+  --verify-command "npm test" >/dev/null
+assert_json_eq "verify type" "$(T)/$l/task-01.json" ".verification.type" "command"
+assert_json_eq "verify value" "$(T)/$l/task-01.json" ".verification.value" "npm test"
+teardown
+
+echo "-- update with verify-instruction"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Manual verification" \
+  --verify-instruction "Check UI is responsive" >/dev/null
+assert_json_eq "verify type" "$(T)/$l/task-01.json" ".verification.type" "instruction"
+assert_json_eq "verify value" "$(T)/$l/task-01.json" ".verification.value" "Check UI is responsive"
+teardown
+
+echo "-- update rejects both verify flags"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+out=$(bash "$S" update-task "$l" task-01 in_progress --note "test" \
+  --verify-command "a" --verify-instruction "b" 2>&1 || true)
+assert_contains "error message" "Cannot specify both" "$out"
+teardown
+
+echo "-- update with all flags combined"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Full update" \
+  --file "a.ts" --file "b.ts" \
+  --doc "PLAN.md" \
+  --skill "task-tracking" \
+  --ac "Works" --ac "Fast" \
+  --verify-command "bash test.sh" >/dev/null
+assert_json_eq "2 files" "$(T)/$l/task-01.json" ".context.files | length" "2"
+assert_json_eq "1 doc" "$(T)/$l/task-01.json" ".context.docs | length" "1"
+assert_json_eq "1 skill" "$(T)/$l/task-01.json" ".context.skills | length" "1"
+assert_json_eq "2 ac" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "2"
+assert_json_eq "verify set" "$(T)/$l/task-01.json" ".verification.type" "command"
+assert_json_eq "status updated" "$(T)/$l/task-01.json" ".status" "in_progress"
+assert_json_eq "note set" "$(T)/$l/task-01.json" ".note" "Full update"
+teardown
+
+echo "-- update preserves existing fields when adding new ones"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" --file "original.ts" --ac "Original AC" >/dev/null
+bash "$S" update-task "$l" task-01 in_progress --note "Adding more" \
+  --file "new.ts" --ac "New AC" >/dev/null
+# Note: update-task REPLACES arrays, doesn't append
+assert_json_eq "files replaced" "$(T)/$l/task-01.json" ".context.files | length" "1"
+assert_json_eq "new file" "$(T)/$l/task-01.json" ".context.files[0]" "new.ts"
+assert_json_eq "ac replaced" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "1"
+assert_json_eq "new ac" "$(T)/$l/task-01.json" ".acceptance_criteria[0]" "New AC"
+teardown
+
 echo ""
 echo "=== help ==="
 
