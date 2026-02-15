@@ -5,8 +5,7 @@
 # Run pb-reset or pb-dev afterward to get a running server.
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$SCRIPT_DIR/../../../.."
+ROOT_DIR="$(pwd)"
 ENV_FILE="$ROOT_DIR/pb/.env"
 PB_DIR="$ROOT_DIR/pb"
 

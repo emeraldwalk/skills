@@ -3,8 +3,7 @@
 # Usage: bash .github/skills/pocketbase-managing/scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$SCRIPT_DIR/../../../.."
+ROOT_DIR="$(pwd)"
 PB_DIR="$ROOT_DIR/pb"
 GITIGNORE="$ROOT_DIR/.gitignore"
 ENV_FILE="$PB_DIR/.env"

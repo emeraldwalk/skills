@@ -4,8 +4,7 @@
 # Requires the PocketBase server to be running (via pb-dev or pb-reset).
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$SCRIPT_DIR/../../../.."
+ROOT_DIR="$(pwd)"
 ENV_FILE="$ROOT_DIR/pb/.env"
 
 if [ -f "$ENV_FILE" ]; then
