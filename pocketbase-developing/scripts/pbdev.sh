@@ -1,6 +1,6 @@
 #!/bin/bash
-# pbcli.sh: Unified PocketBase CLI for project management and migrations
-# Usage (from project root): bash <SKILL_PATH>/scripts/pbcli.sh <command> [options]
+# pbdev.sh: Unified PocketBase CLI for project management and migrations
+# Usage (from project root): bash <SKILL_PATH>/scripts/pbdev.sh <command> [options]
 
 set -e
 
@@ -18,7 +18,7 @@ show_help() {
 PocketBase CLI - Unified tool for PocketBase project management
 
 USAGE:
-  pbcli.sh <command> [subcommand] [options]
+  pbdev.sh <command> [subcommand] [options]
 
 COMMANDS:
   init <module> <port> <email> <password>
@@ -54,38 +54,38 @@ COMMANDS:
 
 EXAMPLES:
   # Initialize new project
-  pbcli.sh init myapp/pb 8090 admin@example.com mypassword
+  pbdev.sh init myapp/pb 8090 admin@example.com mypassword
 
   # Start server
-  pbcli.sh start
+  pbdev.sh start
 
   # Start with fresh database
-  pbcli.sh start --reset
+  pbdev.sh start --reset
 
   # Start in background
-  pbcli.sh start --background
+  pbdev.sh start --background
 
   # Start with fresh database in background
-  pbcli.sh start --reset --background
+  pbdev.sh start --reset --background
 
   # Stop server
-  pbcli.sh stop
+  pbdev.sh stop
 
   # Create a new migration
-  pbcli.sh migration create add_posts_collection
-  pbcli.sh migration create seed_initial_data seed
+  pbdev.sh migration create add_posts_collection
+  pbdev.sh migration create seed_initial_data seed
 
   # Inspect schema
-  pbcli.sh schema inspect
-  pbcli.sh schema inspect posts
+  pbdev.sh schema inspect
+  pbdev.sh schema inspect posts
 
   # Validate migrations
-  pbcli.sh schema validate
+  pbdev.sh schema validate
 
 NOTES:
   - All commands must be run from the project root directory
   - Configuration is stored in pb/.env (PB_PORT, PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD)
-  - Script path: Use full absolute path (e.g., ~/.claude/skills/pocketbase-developing/scripts/pbcli.sh)
+  - Script path: Use full absolute path (e.g., ~/.claude/skills/pocketbase-developing/scripts/pbdev.sh)
 EOF
 }
 
@@ -147,7 +147,7 @@ cmd_start() {
         ;;
       *)
         echo "Error: Unknown option '$1'"
-        echo "Usage: pbcli.sh start [--reset] [--background]"
+        echo "Usage: pbdev.sh start [--reset] [--background]"
         exit 1
         ;;
     esac
@@ -205,7 +205,7 @@ cmd_start() {
     nohup go run . serve --http="127.0.0.1:$PORT" > "$LOG_FILE" 2>&1 &
     echo $! > "$PID_FILE"
     echo "Server started (PID: $(cat "$PID_FILE"))"
-    echo "Run 'pbcli.sh stop' to stop the server"
+    echo "Run 'pbdev.sh stop' to stop the server"
   else
     echo "Starting PocketBase on port $PORT..."
     exec go run . serve --http="127.0.0.1:$PORT"
@@ -321,7 +321,7 @@ cmd_migration_create() {
 
   if [ -z "$DESCRIPTION" ]; then
     echo "Error: description is required."
-    echo "Usage: pbcli.sh migration create <description> [type]"
+    echo "Usage: pbdev.sh migration create <description> [type]"
     echo "  type: create (default), modify, or seed"
     exit 1
   fi
@@ -451,7 +451,7 @@ MIGEOF
 
   echo "Created: pb/pb_migrations/$FILENAME"
   echo "Next: edit the file to fill in your collection name and fields, then validate with:"
-  echo "  pbcli.sh schema validate"
+  echo "  pbdev.sh schema validate"
 }
 
 # Schema inspect command
@@ -473,7 +473,7 @@ cmd_schema_inspect() {
   if ! curl -s --max-time 3 "$BASE_URL/api/health" > /dev/null 2>&1; then
     echo "Error: PocketBase server is not reachable at $BASE_URL"
     echo "Start the server first:"
-    echo "  pbcli.sh start"
+    echo "  pbdev.sh start"
     exit 1
   fi
 
@@ -580,8 +580,8 @@ cmd_schema_validate() {
     echo "All migrations applied successfully."
     echo ""
     echo "Next steps:"
-    echo "  pbcli.sh start --reset   # start server with fresh data"
-    echo "  pbcli.sh start           # start server (keeps current data)"
+    echo "  pbdev.sh start --reset   # start server with fresh data"
+    echo "  pbdev.sh start           # start server (keeps current data)"
   else
     EXIT_CODE=$?
     echo "---"
@@ -616,7 +616,7 @@ case "$COMMAND" in
       *)
         echo "Error: Unknown migration subcommand '$SUBCOMMAND'"
         echo "Available: migration create"
-        echo "Run 'pbcli.sh help' for usage information."
+        echo "Run 'pbdev.sh help' for usage information."
         exit 1
         ;;
     esac
@@ -634,7 +634,7 @@ case "$COMMAND" in
       *)
         echo "Error: Unknown schema subcommand '$SUBCOMMAND'"
         echo "Available: schema inspect, schema validate"
-        echo "Run 'pbcli.sh help' for usage information."
+        echo "Run 'pbdev.sh help' for usage information."
         exit 1
         ;;
     esac
@@ -644,12 +644,12 @@ case "$COMMAND" in
     ;;
   "")
     echo "Error: No command specified."
-    echo "Run 'pbcli.sh help' for usage information."
+    echo "Run 'pbdev.sh help' for usage information."
     exit 1
     ;;
   *)
     echo "Error: Unknown command '$COMMAND'"
-    echo "Run 'pbcli.sh help' for usage information."
+    echo "Run 'pbdev.sh help' for usage information."
     exit 1
     ;;
 esac

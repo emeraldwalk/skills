@@ -15,7 +15,7 @@ Covers project setup, dev server operations, migration creation, schema inspecti
 
 **Working Directory**: Execute all commands from the user's project root (where `pb/` is or will be located). The CLI uses `$(pwd)` to locate the project.
 
-**Script Location**: This skill bundles `scripts/pbcli.sh`. Use the absolute path to the skill directory when invoking it.
+**Script Location**: This skill bundles `scripts/pbdev.sh`. Use the absolute path to the skill directory when invoking it.
 
 **Go commands**: Always use `go -C pb` from workspace root. Never `cd` into `pb/` directly.
 
@@ -36,11 +36,11 @@ Ask the user for the following values:
 
 ### Step 2: Initialize Project
 
-Run `pbcli.sh init` with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies.
+Run `pbdev.sh init` with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies.
 
 ### Step 3: Verify Setup
 
-Run `pbcli.sh start --reset` to confirm everything works.
+Run `pbdev.sh start --reset` to confirm everything works.
 
 Expected outcome:
 
@@ -55,7 +55,7 @@ All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PAS
 
 **Note**: `<SKILL_PATH>` below represents the full path to this skill directory. All commands must be invoked from the project root directory.
 
-**Usage**: `bash scripts/pbcli.sh <command> [subcommand] [options]`
+**Usage**: `bash scripts/pbdev.sh <command> [subcommand] [options]`
 
 > Note: `scripts/` refers to this skill's scripts directory. Use the absolute path to the skill when invoking.
 
@@ -72,47 +72,47 @@ All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PAS
 
 ### Migration Management
 
-| Command                                    | Description                                                             |
-| ------------------------------------------ | ----------------------------------------------------------------------- |
-| `migration create <description> [type]`    | Generate timestamped migration boilerplate (type: create/modify/seed)  |
+| Command                                 | Description                                                           |
+| --------------------------------------- | --------------------------------------------------------------------- |
+| `migration create <description> [type]` | Generate timestamped migration boilerplate (type: create/modify/seed) |
 
 ### Schema Operations
 
-| Command                          | Description                                                                      |
-| -------------------------------- | -------------------------------------------------------------------------------- |
-| `schema inspect [collection]`    | Dump current schema as JSON (requires running server, optional collection name) |
-| `schema validate`                | Dry-run all migrations in clean environment to check for errors                 |
+| Command                       | Description                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `schema inspect [collection]` | Dump current schema as JSON (requires running server, optional collection name) |
+| `schema validate`             | Dry-run all migrations in clean environment to check for errors                 |
 
 ### Help
 
-| Command | Description                                        |
-| ------- | -------------------------------------------------- |
-| `help`  | Show help message with all commands and examples   |
+| Command | Description                                      |
+| ------- | ------------------------------------------------ |
+| `help`  | Show help message with all commands and examples |
 
 ## Iteration Workflow
 
-| Action                       | Procedure                                                         |
-| ---------------------------- | ----------------------------------------------------------------- |
-| Initialize or update Go deps | Run `pbcli.sh init` (pass module name on first run)               |
-| Start server (foreground)    | Run `pbcli.sh start`                                              |
-| Start server (background)    | Run `pbcli.sh start --background`                                 |
-| Wipe DB and restart          | Run `pbcli.sh start --reset` (add `--background` if needed)       |
-| Stop server                  | Run `pbcli.sh stop` (or `Ctrl+C` if running in foreground)        |
-| View background server logs  | `tail -f pb/server.log` or `cat pb/server.log`                    |
+| Action                       | Procedure                                                   |
+| ---------------------------- | ----------------------------------------------------------- |
+| Initialize or update Go deps | Run `pbdev.sh init` (pass module name on first run)         |
+| Start server (foreground)    | Run `pbdev.sh start`                                        |
+| Start server (background)    | Run `pbdev.sh start --background`                           |
+| Wipe DB and restart          | Run `pbdev.sh start --reset` (add `--background` if needed) |
+| Stop server                  | Run `pbdev.sh stop` (or `Ctrl+C` if running in foreground)  |
+| View background server logs  | `tail -f pb/server.log` or `cat pb/server.log`              |
 
 ### Schema Change Loop
 
 The recommended workflow for iterating on schema:
 
-1. **Create migration file** — Run `pbcli.sh migration create <description> [type]`
+1. **Create migration file** — Run `pbdev.sh migration create <description> [type]`
 2. **Edit migration file** in `pb/pb_migrations/` with collection definitions
-3. **Validate migrations** — Run `pbcli.sh schema validate` to test migrations in clean environment
-4. **Start server** — Run `pbcli.sh start --reset` to wipe DB and apply all migrations
-5. **Verify** — Check admin dashboard at `/_/` or inspect schema with `pbcli.sh schema inspect`
+3. **Validate migrations** — Run `pbdev.sh schema validate` to test migrations in clean environment
+4. **Start server** — Run `pbdev.sh start --reset` to wipe DB and apply all migrations
+5. **Verify** — Check admin dashboard at `/_/` or inspect schema with `pbdev.sh schema inspect`
 
 Migrations run automatically on server start. The `--reset` flag gives a clean slate every time, so you can freely edit migration files and re-test.
 
-**Alternative: Quick validation** — Use `pbcli.sh schema validate` to test migrations without starting the server. This is faster for catching syntax errors and migration issues.
+**Alternative: Quick validation** — Use `pbdev.sh schema validate` to test migrations without starting the server. This is faster for catching syntax errors and migration issues.
 
 ### Automigrate (Dashboard Mode)
 
