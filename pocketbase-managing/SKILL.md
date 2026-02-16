@@ -13,15 +13,16 @@ Covers initial project setup, dev server operations, schema iteration workflow, 
 
 ## Important: Script Execution Context
 
-**Working Directory**: All scripts in this skill MUST be executed from the **user's project root directory** (where the `pb/` directory will be or is located), NOT from the skill directory. The scripts use `$(pwd)` to determine the project root.
+**Working Directory**: The CLI script MUST be executed from the **user's project root directory** (where the `pb/` directory will be or is located), NOT from the skill directory. The script uses `$(pwd)` to determine the project root.
 
-**Script Paths**: Scripts are located in this skill's `scripts/` directory. When invoking them, use the full absolute path to the skill (e.g., if the skill is at `~/.claude/skills/pocketbase-managing`, use `bash ~/.claude/skills/pocketbase-managing/scripts/pb-init.sh`).
+**Script Path**: The CLI is located at `<SKILL_PATH>/scripts/pbdev.sh`. When invoking it, use the full absolute path to the skill (e.g., `bash ~/.claude/skills/pocketbase-managing/scripts/pbdev.sh`).
 
 **Example invocation pattern**:
+
 ```bash
 # From the user's project directory:
 cd /path/to/user/project
-bash ~/.claude/skills/pocketbase-managing/scripts/pb-init.sh args...
+bash ~/.claude/skills/pocketbase-managing/scripts/pbdev.sh <command> [options]
 ```
 
 **Go commands**: Always use `go -C pb` from workspace root. Never `cd` into `pb/` directly.
@@ -43,11 +44,11 @@ Ask the user for the following values:
 
 ### Step 2: Initialize Project
 
-Run **PB Init** (see Operations below) with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies.
+Run `pbdev.sh init` with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies.
 
 ### Step 3: Verify Setup
 
-Run a **PB Reset** (see Operations below) to confirm everything works.
+Run `pbdev.sh start --reset` to confirm everything works.
 
 Expected outcome:
 
@@ -56,41 +57,44 @@ Expected outcome:
 - Server is accessible at `http://127.0.0.1:<PB_PORT>`
 - Admin dashboard at `http://127.0.0.1:<PB_PORT>/_/`
 
-## Operations
+## CLI Commands
 
-All operations source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PASSWORD`.
+All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PASSWORD`.
 
-**Note**: `<SKILL_PATH>` below represents the full path to this skill directory. All scripts must be invoked from the project root directory.
+**Note**: `<SKILL_PATH>` below represents the full path to this skill directory. All commands must be invoked from the project root directory.
 
-| Operation    | Script                                                                                      | Description                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **PB Init**  | `bash <SKILL_PATH>/scripts/pb-init.sh <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
-| **PB Stop**  | `bash <SKILL_PATH>/scripts/pb-stop.sh`                                | Kill existing PocketBase instance on the configured port                                      |
-| **PB Dev**   | `bash <SKILL_PATH>/scripts/pb-dev.sh`                                 | Stop existing instance, then start the dev server                                             |
-| **PB Reset** | `bash <SKILL_PATH>/scripts/pb-reset.sh`                               | Stop instance, wipe data, create superuser, start fresh                                       |
+**Usage**: `bash <SKILL_PATH>/scripts/pbdev.sh <command> [options]`
+
+| Command                               | Description                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `init <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
+| `start`                               | Stop existing instance (if running), then start the dev server                                |
+| `start --reset`                       | Stop instance, wipe data, create superuser, start fresh                                       |
+| `stop`                                | Kill existing PocketBase instance on the configured port                                      |
+| `help`                                | Show help message with all commands and usage examples                                        |
 
 ## Iteration Workflow
 
-| Action                       | Procedure                                              |
-| ---------------------------- | ------------------------------------------------------ |
-| Initialize or update Go deps | Run **PB Init** (pass module name on first run)        |
-| Start server                 | Run **PB Dev**                                         |
-| Wipe DB and restart          | Run **PB Reset**                                       |
-| Stop server                  | Run **PB Stop** (or `Ctrl+C` if running in foreground) |
+| Action                       | Procedure                                                  |
+| ---------------------------- | ---------------------------------------------------------- |
+| Initialize or update Go deps | Run `pbdev.sh init` (pass module name on first run)        |
+| Start server                 | Run `pbdev.sh start`                                       |
+| Wipe DB and restart          | Run `pbdev.sh start --reset`                               |
+| Stop server                  | Run `pbdev.sh stop` (or `Ctrl+C` if running in foreground) |
 
 ### Schema Change Loop
 
 The recommended workflow for iterating on schema:
 
 1. **Write or edit migration files** in `pb/pb_migrations/`
-2. **Run PB Reset** — wipes DB, re-runs all migrations from scratch, creates superuser
+2. **Run `pbdev.sh start --reset`** — wipes DB, re-runs all migrations from scratch, creates superuser
 3. **Verify** — check the admin dashboard at `/_/` or hit the API
 
-Migrations run automatically on server start. PB Reset gives a clean slate every time, so you can freely edit migration files and re-test.
+Migrations run automatically on server start. The `--reset` flag gives a clean slate every time, so you can freely edit migration files and re-test.
 
 ### Automigrate (Dashboard Mode)
 
-When running via `go run` (which **PB Dev** uses), `Automigrate` is enabled. Changes made in the admin dashboard (`/_/`) automatically generate JS migration files in `pb_migrations/`. Commit these files to version control.
+When running via `go run` (which `pbdev.sh start` uses), `Automigrate` is enabled. Changes made in the admin dashboard (`/_/`) automatically generate JS migration files in `pb_migrations/`. Commit these files to version control.
 
 ### Hooks
 
