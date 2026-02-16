@@ -1,6 +1,6 @@
 #!/bin/bash
-# pbdev.sh: Unified PocketBase CLI for project management
-# Usage (from project root): bash <SKILL_PATH>/scripts/pbdev.sh <command> [options]
+# pbcli.sh: Unified PocketBase CLI for project management and migrations
+# Usage (from project root): bash <SKILL_PATH>/scripts/pbcli.sh <command> [options]
 
 set -e
 
@@ -8,6 +8,7 @@ ROOT_DIR="$(pwd)"
 PB_DIR="$ROOT_DIR/pb"
 ENV_FILE="$PB_DIR/.env"
 GITIGNORE="$ROOT_DIR/.gitignore"
+MIGRATIONS_DIR="$PB_DIR/pb_migrations"
 
 # Help message
 show_help() {
@@ -15,7 +16,7 @@ show_help() {
 PocketBase CLI - Unified tool for PocketBase project management
 
 USAGE:
-  pbdev.sh <command> [options]
+  pbcli.sh <command> [subcommand] [options]
 
 COMMANDS:
   init <module> <port> <email> <password>
@@ -31,26 +32,51 @@ COMMANDS:
   stop
       Stop the running PocketBase server
 
+  migration create <description> [type]
+      Generate a timestamped migration boilerplate file
+      description: snake_case name (e.g. create_posts)
+      type: create (default), modify, or seed
+
+  schema inspect [collection-name]
+      Dump the current PocketBase schema as JSON
+      Requires the server to be running
+      Optional: specify collection name to inspect only that collection
+
+  schema validate
+      Dry-run all migrations to check for errors
+      Wipes pb_data and runs migrations without starting server
+
   help
       Show this help message
 
 EXAMPLES:
   # Initialize new project
-  pbdev.sh init myapp/pb 8090 admin@example.com mypassword
+  pbcli.sh init myapp/pb 8090 admin@example.com mypassword
 
   # Start server
-  pbdev.sh start
+  pbcli.sh start
 
   # Start with fresh database
-  pbdev.sh start --reset
+  pbcli.sh start --reset
 
   # Stop server
-  pbdev.sh stop
+  pbcli.sh stop
+
+  # Create a new migration
+  pbcli.sh migration create add_posts_collection
+  pbcli.sh migration create seed_initial_data seed
+
+  # Inspect schema
+  pbcli.sh schema inspect
+  pbcli.sh schema inspect posts
+
+  # Validate migrations
+  pbcli.sh schema validate
 
 NOTES:
   - All commands must be run from the project root directory
   - Configuration is stored in pb/.env (PB_PORT, PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD)
-  - Script path: Use full absolute path (e.g., ~/.claude/skills/pocketbase-developing/scripts/pbdev.sh)
+  - Script path: Use full absolute path (e.g., ~/.claude/skills/pocketbase-developing/scripts/pbcli.sh)
 EOF
 }
 
@@ -244,8 +270,286 @@ EOF
   echo "Done."
 }
 
+# Migration create command
+cmd_migration_create() {
+  DESCRIPTION="${1:-}"
+  TYPE="${2:-create}"
+
+  if [ -z "$DESCRIPTION" ]; then
+    echo "Error: description is required."
+    echo "Usage: pbcli.sh migration create <description> [type]"
+    echo "  type: create (default), modify, or seed"
+    exit 1
+  fi
+
+  # Ensure migrations directory exists
+  mkdir -p "$MIGRATIONS_DIR"
+
+  # Generate timestamp
+  TIMESTAMP=$(date +%s)
+  FILENAME="${TIMESTAMP}_${DESCRIPTION}.js"
+  FILEPATH="$MIGRATIONS_DIR/$FILENAME"
+
+  case "$TYPE" in
+    create)
+      cat > "$FILEPATH" << 'MIGEOF'
+/// <reference path="../pb_data/types.d.ts" />
+
+migrate((app) => {
+  const collection = new Collection({
+    type: "base",          // "base", "auth", or "view"
+    name: "COLLECTION_NAME",
+    listRule: null,        // null = superuser only, "" = public, "@request.auth.id != ''" = any auth
+    viewRule: null,
+    createRule: null,
+    updateRule: null,
+    deleteRule: null,
+    fields: [
+      // new TextField({ name: "title", required: true, min: 1, max: 200 }),
+      // new NumberField({ name: "count", required: false, min: 0, onlyInt: true }),
+      // new BoolField({ name: "active" }),
+      // new EmailField({ name: "contactEmail" }),
+      // new URLField({ name: "website" }),
+      // new EditorField({ name: "body", required: true }),
+      // new DateField({ name: "publishedAt" }),
+      // new AutodateField({ name: "created", onCreate: true, onUpdate: false }),
+      // new AutodateField({ name: "updated", onCreate: true, onUpdate: true }),
+      // new SelectField({ name: "status", values: ["draft", "published"], maxSelect: 1, required: true }),
+      // new FileField({ name: "avatar", maxSelect: 1, maxSize: 5242880, mimeTypes: ["image/jpeg", "image/png"] }),
+      // new JSONField({ name: "metadata" }),
+      // new GeoPointField({ name: "location" }),
+
+      // Relations — ALWAYS look up the target collection ID at runtime:
+      // const targetCol = app.findCollectionByNameOrId("target_collection_name")
+      // new RelationField({ name: "author", collectionId: targetCol.id, maxSelect: 1, cascadeDelete: false }),
+    ],
+    indexes: [
+      // "CREATE INDEX idx_COLLECTION_NAME_field ON COLLECTION_NAME (field)",
+      // "CREATE UNIQUE INDEX idx_COLLECTION_NAME_field ON COLLECTION_NAME (field)",
+    ],
+  })
+  app.save(collection)
+}, (app) => {
+  const collection = app.findCollectionByNameOrId("COLLECTION_NAME")
+  app.delete(collection)
+})
+MIGEOF
+      ;;
+
+    modify)
+      cat > "$FILEPATH" << 'MIGEOF'
+/// <reference path="../pb_data/types.d.ts" />
+
+migrate((app) => {
+  const collection = app.findCollectionByNameOrId("COLLECTION_NAME")
+
+  // Add a field:
+  // collection.fields.add(new TextField({ name: "subtitle", max: 200 }))
+
+  // Remove a field:
+  // collection.fields.removeByName("old_field")
+
+  // Modify an existing field (returns a reference):
+  // const titleField = collection.fields.getByName("title")
+  // titleField.max = 500
+
+  // Update API rules:
+  // collection.listRule = "@request.auth.id != ''"
+
+  // Add an index:
+  // collection.addIndex("idx_name", false, "field_name", "")
+
+  app.save(collection)
+}, (app) => {
+  const collection = app.findCollectionByNameOrId("COLLECTION_NAME")
+
+  // Reverse changes here
+
+  app.save(collection)
+})
+MIGEOF
+      ;;
+
+    seed)
+      cat > "$FILEPATH" << 'MIGEOF'
+/// <reference path="../pb_data/types.d.ts" />
+
+migrate((app) => {
+  const collection = app.findCollectionByNameOrId("COLLECTION_NAME")
+
+  const records = [
+    // { field1: "value1", field2: "value2" },
+  ]
+
+  for (const data of records) {
+    const record = new Record(collection)
+    for (const [key, value] of Object.entries(data)) {
+      record.set(key, value)
+    }
+    app.save(record)
+  }
+}, (app) => {
+  // Optional: delete seeded records
+  // const collection = app.findCollectionByNameOrId("COLLECTION_NAME")
+  // const records = app.findRecordsByFilter(collection, "field1 = 'value1'", "", 0, 0)
+  // for (const record of records) {
+  //   app.delete(record)
+  // }
+})
+MIGEOF
+      ;;
+
+    *)
+      echo "Error: unknown type '$TYPE'. Use: create, modify, or seed"
+      exit 1
+      ;;
+  esac
+
+  echo "Created: pb/pb_migrations/$FILENAME"
+  echo "Next: edit the file to fill in your collection name and fields, then validate with:"
+  echo "  pbcli.sh schema validate"
+}
+
+# Schema inspect command
+cmd_schema_inspect() {
+  COLLECTION_NAME="${1:-}"
+
+  if [ -f "$ENV_FILE" ]; then
+    set -a; source "$ENV_FILE"; set +a
+  fi
+
+  if [ -z "$PB_PORT" ]; then
+    echo "Error: PB_PORT is not set. Create pb/.env with PB_PORT or export it."
+    exit 1
+  fi
+
+  BASE_URL="http://127.0.0.1:$PB_PORT"
+
+  # Check that the server is reachable
+  if ! curl -s --max-time 3 "$BASE_URL/api/health" > /dev/null 2>&1; then
+    echo "Error: PocketBase server is not reachable at $BASE_URL"
+    echo "Start the server first:"
+    echo "  pbcli.sh start"
+    exit 1
+  fi
+
+  # Authenticate as superuser to access collection schema
+  if [ -z "$PB_ADMIN_EMAIL" ] || [ -z "$PB_ADMIN_PASSWORD" ]; then
+    echo "Error: PB_ADMIN_EMAIL and PB_ADMIN_PASSWORD must be set in pb/.env"
+    exit 1
+  fi
+
+  AUTH_RESPONSE=$(curl -s --max-time 5 \
+    -H "Content-Type: application/json" \
+    -d "{\"identity\":\"$PB_ADMIN_EMAIL\",\"password\":\"$PB_ADMIN_PASSWORD\"}" \
+    "$BASE_URL/api/collections/_superusers/auth-with-password" 2>&1)
+
+  TOKEN=$(echo "$AUTH_RESPONSE" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+  if [ -z "$TOKEN" ]; then
+    echo "Error: Failed to authenticate as superuser."
+    echo "Response: $AUTH_RESPONSE"
+    exit 1
+  fi
+
+  if [ -n "$COLLECTION_NAME" ]; then
+    # Fetch a specific collection
+    RESPONSE=$(curl -s --max-time 5 \
+      -H "Authorization: Bearer $TOKEN" \
+      "$BASE_URL/api/collections/$COLLECTION_NAME" 2>&1)
+
+    # Check for error
+    if echo "$RESPONSE" | grep -q '"code":404'; then
+      echo "Error: Collection '$COLLECTION_NAME' not found."
+      echo ""
+      echo "Available collections:"
+      curl -s --max-time 5 \
+        -H "Authorization: Bearer $TOKEN" \
+        "$BASE_URL/api/collections" | \
+        grep -o '"name":"[^"]*"' | cut -d'"' -f4 | sort
+      exit 1
+    fi
+  else
+    # Fetch all collections
+    RESPONSE=$(curl -s --max-time 5 \
+      -H "Authorization: Bearer $TOKEN" \
+      "$BASE_URL/api/collections" 2>&1)
+  fi
+
+  # Pretty-print if python3 is available, otherwise raw output
+  if command -v python3 > /dev/null 2>&1; then
+    echo "$RESPONSE" | python3 -m json.tool
+  else
+    echo "$RESPONSE"
+  fi
+}
+
+# Schema validate command
+cmd_schema_validate() {
+  if [ -f "$ENV_FILE" ]; then
+    set -a; source "$ENV_FILE"; set +a
+  fi
+
+  if [ -z "$PB_PORT" ]; then
+    echo "Error: PB_PORT is not set. Create pb/.env with PB_PORT or export it."
+    exit 1
+  fi
+
+  # Stop any running instance
+  PID=$(lsof -ti :"$PB_PORT" 2>/dev/null || true)
+  if [ -n "$PID" ]; then
+    echo "Stopping PocketBase on port $PB_PORT (PID: $PID)"
+    kill "$PID" 2>/dev/null || true
+    sleep 1
+  fi
+
+  # Wipe data for a clean slate
+  if [ -d "$PB_DIR/pb_data" ]; then
+    echo "Removing pb_data..."
+    rm -rf "$PB_DIR/pb_data"
+  fi
+
+  # Count migration files
+  MIGRATION_COUNT=$(ls "$MIGRATIONS_DIR"/*.js 2>/dev/null | wc -l | tr -d ' ')
+  echo "Found $MIGRATION_COUNT migration file(s)."
+  echo ""
+
+  if [ "$MIGRATION_COUNT" -eq 0 ]; then
+    echo "No migrations to validate."
+    exit 0
+  fi
+
+  # List migrations in order
+  echo "Migrations (execution order):"
+  ls -1 "$MIGRATIONS_DIR"/*.js 2>/dev/null | while read -r f; do
+    echo "  $(basename "$f")"
+  done
+  echo ""
+
+  # Run migrations
+  echo "Running migrations..."
+  echo "---"
+  cd "$PB_DIR"
+  if go run . migrate 2>&1; then
+    echo "---"
+    echo ""
+    echo "All migrations applied successfully."
+    echo ""
+    echo "Next steps:"
+    echo "  pbcli.sh start --reset   # start server with fresh data"
+    echo "  pbcli.sh start           # start server (keeps current data)"
+  else
+    EXIT_CODE=$?
+    echo "---"
+    echo ""
+    echo "Migration FAILED. Fix the errors above and re-run validation."
+    exit $EXIT_CODE
+  fi
+}
+
 # Main command router
 COMMAND="${1:-}"
+SUBCOMMAND="${2:-}"
 
 case "$COMMAND" in
   init)
@@ -259,17 +563,49 @@ case "$COMMAND" in
   stop)
     cmd_stop
     ;;
+  migration)
+    case "$SUBCOMMAND" in
+      create)
+        shift 2
+        cmd_migration_create "$@"
+        ;;
+      *)
+        echo "Error: Unknown migration subcommand '$SUBCOMMAND'"
+        echo "Available: migration create"
+        echo "Run 'pbcli.sh help' for usage information."
+        exit 1
+        ;;
+    esac
+    ;;
+  schema)
+    case "$SUBCOMMAND" in
+      inspect)
+        shift 2
+        cmd_schema_inspect "$@"
+        ;;
+      validate)
+        shift 2
+        cmd_schema_validate "$@"
+        ;;
+      *)
+        echo "Error: Unknown schema subcommand '$SUBCOMMAND'"
+        echo "Available: schema inspect, schema validate"
+        echo "Run 'pbcli.sh help' for usage information."
+        exit 1
+        ;;
+    esac
+    ;;
   help|--help|-h)
     show_help
     ;;
   "")
     echo "Error: No command specified."
-    echo "Run 'pbdev.sh help' for usage information."
+    echo "Run 'pbcli.sh help' for usage information."
     exit 1
     ;;
   *)
     echo "Error: Unknown command '$COMMAND'"
-    echo "Run 'pbdev.sh help' for usage information."
+    echo "Run 'pbcli.sh help' for usage information."
     exit 1
     ;;
 esac
