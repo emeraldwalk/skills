@@ -64,9 +64,11 @@ All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PAS
 | Command                               | Description                                                                                   |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `init <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
-| `start`                               | Stop existing instance (if running), then start the dev server                                |
+| `start`                               | Stop existing instance (if running), then start the dev server in foreground                  |
 | `start --reset`                       | Stop instance, wipe data, create superuser, start fresh                                       |
-| `stop`                                | Kill existing PocketBase instance on the configured port                                      |
+| `start --background`                  | Start server in background, log to `pb/server.log`, save PID to `pb/.pid`                     |
+| `start --reset --background`          | Combine reset and background modes                                                            |
+| `stop`                                | Kill existing PocketBase instance (checks PID file and port)                                  |
 
 ### Migration Management
 
@@ -89,12 +91,14 @@ All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PAS
 
 ## Iteration Workflow
 
-| Action                       | Procedure                                                  |
-| ---------------------------- | ---------------------------------------------------------- |
-| Initialize or update Go deps | Run `pbcli.sh init` (pass module name on first run)        |
-| Start server                 | Run `pbcli.sh start`                                       |
-| Wipe DB and restart          | Run `pbcli.sh start --reset`                               |
-| Stop server                  | Run `pbcli.sh stop` (or `Ctrl+C` if running in foreground) |
+| Action                       | Procedure                                                         |
+| ---------------------------- | ----------------------------------------------------------------- |
+| Initialize or update Go deps | Run `pbcli.sh init` (pass module name on first run)               |
+| Start server (foreground)    | Run `pbcli.sh start`                                              |
+| Start server (background)    | Run `pbcli.sh start --background`                                 |
+| Wipe DB and restart          | Run `pbcli.sh start --reset` (add `--background` if needed)       |
+| Stop server                  | Run `pbcli.sh stop` (or `Ctrl+C` if running in foreground)        |
+| View background server logs  | `tail -f pb/server.log` or `cat pb/server.log`                    |
 
 ### Schema Change Loop
 

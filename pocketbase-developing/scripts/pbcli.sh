@@ -9,6 +9,8 @@ PB_DIR="$ROOT_DIR/pb"
 ENV_FILE="$PB_DIR/.env"
 GITIGNORE="$ROOT_DIR/.gitignore"
 MIGRATIONS_DIR="$PB_DIR/pb_migrations"
+PID_FILE="$PB_DIR/.pid"
+LOG_FILE="$PB_DIR/server.log"
 
 # Help message
 show_help() {
@@ -24,10 +26,11 @@ COMMANDS:
       Creates pb/ directory, main.go, .env file, updates .gitignore,
       initializes Go module, and runs go mod tidy
 
-  start [--reset]
+  start [--reset] [--background]
       Start the PocketBase dev server
       Stops existing instance if running, then starts server
       --reset: Remove pb_data before starting (fresh database)
+      --background: Run server in background, log to pb/server.log
 
   stop
       Stop the running PocketBase server
@@ -58,6 +61,12 @@ EXAMPLES:
 
   # Start with fresh database
   pbcli.sh start --reset
+
+  # Start in background
+  pbcli.sh start --background
+
+  # Start with fresh database in background
+  pbcli.sh start --reset --background
 
   # Stop server
   pbcli.sh stop
@@ -92,6 +101,23 @@ cmd_stop() {
   fi
   PORT="$PB_PORT"
 
+  # Try to stop by PID file first
+  if [ -f "$PID_FILE" ]; then
+    SAVED_PID=$(cat "$PID_FILE" 2>/dev/null || true)
+    if [ -n "$SAVED_PID" ] && kill -0 "$SAVED_PID" 2>/dev/null; then
+      echo "Stopping PocketBase (PID: $SAVED_PID from pid file)"
+      kill "$SAVED_PID" 2>/dev/null || true
+      sleep 1
+      rm -f "$PID_FILE"
+      echo "Server stopped."
+      return
+    else
+      # PID file exists but process is dead, clean up
+      rm -f "$PID_FILE"
+    fi
+  fi
+
+  # Fallback to port-based lookup
   PID=$(lsof -ti :"$PORT" 2>/dev/null || true)
   if [ -n "$PID" ]; then
     echo "Stopping PocketBase on port $PORT (PID: $PID)"
@@ -106,6 +132,7 @@ cmd_stop() {
 # Start command
 cmd_start() {
   local RESET_FLAG=false
+  local BACKGROUND_FLAG=false
 
   # Parse flags
   while [[ $# -gt 0 ]]; do
@@ -114,9 +141,13 @@ cmd_start() {
         RESET_FLAG=true
         shift
         ;;
+      --background)
+        BACKGROUND_FLAG=true
+        shift
+        ;;
       *)
         echo "Error: Unknown option '$1'"
-        echo "Usage: pbdev.sh start [--reset]"
+        echo "Usage: pbcli.sh start [--reset] [--background]"
         exit 1
         ;;
     esac
@@ -139,6 +170,9 @@ cmd_start() {
     kill "$PID" 2>/dev/null || true
     sleep 1
   fi
+
+  # Clean up old PID file if exists
+  rm -f "$PID_FILE"
 
   # Reset database if --reset flag is set
   if [ "$RESET_FLAG" = true ]; then
@@ -163,9 +197,19 @@ cmd_start() {
   fi
 
   # Start server
-  echo "Starting PocketBase on port $PORT..."
   cd "$PB_DIR"
-  exec go run . serve --http="127.0.0.1:$PORT"
+
+  if [ "$BACKGROUND_FLAG" = true ]; then
+    echo "Starting PocketBase on port $PORT in background..."
+    echo "Logs: $LOG_FILE"
+    nohup go run . serve --http="127.0.0.1:$PORT" > "$LOG_FILE" 2>&1 &
+    echo $! > "$PID_FILE"
+    echo "Server started (PID: $(cat "$PID_FILE"))"
+    echo "Run 'pbcli.sh stop' to stop the server"
+  else
+    echo "Starting PocketBase on port $PORT..."
+    exec go run . serve --http="127.0.0.1:$PORT"
+  fi
 }
 
 # Init command
@@ -234,7 +278,7 @@ EOF
   fi
 
   # Update .gitignore
-  PB_IGNORE_ENTRIES=("pb/pb_data/" "pb/pocketbase" "pb/.env")
+  PB_IGNORE_ENTRIES=("pb/pb_data/" "pb/pocketbase" "pb/.env" "pb/.pid" "pb/server.log")
   if [ ! -f "$GITIGNORE" ]; then
     printf "# PocketBase\n" > "$GITIGNORE"
     for entry in "${PB_IGNORE_ENTRIES[@]}"; do
