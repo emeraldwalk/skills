@@ -1,6 +1,6 @@
 #!/bin/bash
 # pb-init.sh: Full PocketBase project initialization
-# Usage: bash scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>
+# Usage (from project root): bash <SKILL_PATH>/scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>
 set -e
 
 ROOT_DIR="$(pwd)"
@@ -57,7 +57,7 @@ fi
 if [ ! -f "$ENV_FILE" ]; then
   if [ -z "$PB_PORT" ] || [ -z "$PB_ADMIN_EMAIL" ] || [ -z "$PB_ADMIN_PASSWORD" ]; then
     echo "Error: pb/.env does not exist and missing required args."
-    echo "Usage: bash scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>"
+    echo "Usage (from project root): bash <SKILL_PATH>/scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>"
     exit 1
   fi
   cat > "$ENV_FILE" << EOF
@@ -93,7 +93,7 @@ cd "$PB_DIR"
 if [ ! -f "go.mod" ]; then
   if [ -z "$MODULE_NAME" ]; then
     echo "Error: go.mod does not exist and no module name provided."
-    echo "Usage: bash scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>"
+    echo "Usage (from project root): bash <SKILL_PATH>/scripts/pb-init.sh <module-name> <port> <admin-email> <admin-password>"
     exit 1
   fi
   echo "Initializing Go module: $MODULE_NAME"

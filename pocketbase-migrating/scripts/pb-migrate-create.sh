@@ -1,6 +1,6 @@
 #!/bin/bash
 # pb-migrate-create.sh: Generate a timestamped PocketBase migration boilerplate file
-# Usage: bash scripts/pb-migrate-create.sh <description> [type]
+# Usage (from project root): bash <SKILL_PATH>/scripts/pb-migrate-create.sh <description> [type]
 #   description: snake_case name (e.g. create_posts, add_featured_to_posts)
 #   type: create (default), modify, or seed
 set -e
@@ -13,7 +13,7 @@ TYPE="${2:-create}"
 
 if [ -z "$DESCRIPTION" ]; then
   echo "Error: description is required."
-  echo "Usage: bash scripts/pb-migrate-create.sh <description> [type]"
+  echo "Usage (from project root): bash <SKILL_PATH>/scripts/pb-migrate-create.sh <description> [type]"
   echo "  type: create (default), modify, or seed"
   exit 1
 fi
@@ -143,4 +143,4 @@ esac
 
 echo "Created: pb/pb_migrations/$FILENAME"
 echo "Next: edit the file to fill in your collection name and fields, then validate with:"
-echo "  bash scripts/pb-schema-validate.sh"
+echo "  bash <SKILL_PATH>/scripts/pb-schema-validate.sh"

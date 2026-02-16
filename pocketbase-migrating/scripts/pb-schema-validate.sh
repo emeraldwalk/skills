@@ -1,6 +1,6 @@
 #!/bin/bash
 # pb-schema-validate.sh: Dry-run all PocketBase migrations to check for errors
-# Usage: bash scripts/pb-schema-validate.sh
+# Usage (from project root): bash <SKILL_PATH>/scripts/pb-schema-validate.sh
 # Wipes pb_data and runs migrations without starting the server.
 # Run pb-reset or pb-dev afterward to get a running server.
 set -e
@@ -59,8 +59,8 @@ if go run . migrate 2>&1; then
   echo "All migrations applied successfully."
   echo ""
   echo "Next steps:"
-  echo "  bash scripts/pb-reset.sh   # start server with fresh data"
-  echo "  bash scripts/pb-dev.sh      # start server (keeps current data)"
+  echo "  bash <POCKETBASE_MANAGING_SKILL_PATH>/scripts/pb-reset.sh   # start server with fresh data"
+  echo "  bash <POCKETBASE_MANAGING_SKILL_PATH>/scripts/pb-dev.sh      # start server (keeps current data)"
 else
   EXIT_CODE=$?
   echo "---"

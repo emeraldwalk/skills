@@ -9,21 +9,31 @@ Tooling for authoring, inspecting, and validating PocketBase schema migrations. 
 
 ## Prerequisites
 
-- PocketBase project already initialized (via `pocketbase` skill's **PB Init**)
+- PocketBase project already initialized (via `pocketbase-managing` skill's **PB Init**)
 - Go 1.23+ installed and on PATH
-- For **Inspect**: PocketBase server must be running (via `pb-dev.sh` or `pb-reset.sh`)
+- For **Inspect**: PocketBase server must be running
+
+## Important: Script Execution Context
+
+**Working Directory**: All scripts in this skill MUST be executed from the **user's project root directory** (where the `pb/` directory is located), NOT from the skill directory. The scripts use `$(pwd)` to determine the project root.
+
+**Script Paths**: Scripts are located in this skill's `scripts/` directory. When invoking them, use the full absolute path to the skill directory.
 
 ## Operations
 
+**Note**: `<SKILL_PATH>` below represents the full path to this skill directory. All scripts must be invoked from the project root directory.
+
 | Operation           | Script                                                                                       | Description                                              |
 | ------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Migrate Create**  | `bash scripts/pb-migrate-create.sh <description> [type]` | Generate a timestamped migration file with boilerplate   |
-| **Schema Inspect**  | `bash scripts/pb-schema-inspect.sh [collection-name]`    | Dump live schema as JSON (all collections or one)        |
-| **Schema Validate** | `bash scripts/pb-schema-validate.sh`                     | Wipe data and dry-run all migrations to check for errors |
+| **Migrate Create**  | `bash <SKILL_PATH>/scripts/pb-migrate-create.sh <description> [type]` | Generate a timestamped migration file with boilerplate   |
+| **Schema Inspect**  | `bash <SKILL_PATH>/scripts/pb-schema-inspect.sh [collection-name]`    | Dump live schema as JSON (all collections or one)        |
+| **Schema Validate** | `bash <SKILL_PATH>/scripts/pb-schema-validate.sh`                     | Wipe data and dry-run all migrations to check for errors |
 
 ### Migrate Create
 
 Generates a new migration file in `pb/pb_migrations/` with the correct timestamp and boilerplate.
+
+**Note**: In all examples below, `scripts/` is shorthand for `<SKILL_PATH>/scripts/` where `<SKILL_PATH>` is the full path to this skill directory.
 
 ```bash
 # Create a new collection
@@ -81,9 +91,9 @@ Follow this loop when adding or modifying collections:
    ```bash
    bash scripts/pb-schema-validate.sh
    ```
-5. **Reset & verify** — start fresh server and check admin dashboard
+5. **Reset & verify** — start fresh server and check admin dashboard (uses pocketbase-managing skill)
    ```bash
-   bash scripts/pb-reset.sh
+   bash <POCKETBASE_MANAGING_SKILL_PATH>/scripts/pb-reset.sh
    ```
 
 ## Migration Authoring Rules
@@ -180,4 +190,4 @@ const collection = new Collection({
 
 ## Reference
 
-For field types, API rules, and the full JS migration API, see the **pocketbase** skill's [references/migrations.md](../pocketbase/references/migrations.md).
+For field types, API rules, and the full JS migration API, see the **pocketbase-managing** skill's [references/migrations.md](../pocketbase-managing/references/migrations.md).

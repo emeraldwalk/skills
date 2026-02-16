@@ -10,7 +10,21 @@ Covers initial project setup, dev server operations, schema iteration workflow, 
 ## Prerequisites
 
 - Go 1.23+ installed and on PATH
-- **Working directory**: Always run go commands from the workspace root using `go -C pb`. Never `cd` into `pb/` directly.
+
+## Important: Script Execution Context
+
+**Working Directory**: All scripts in this skill MUST be executed from the **user's project root directory** (where the `pb/` directory will be or is located), NOT from the skill directory. The scripts use `$(pwd)` to determine the project root.
+
+**Script Paths**: Scripts are located in this skill's `scripts/` directory. When invoking them, use the full absolute path to the skill (e.g., if the skill is at `~/.claude/skills/pocketbase-managing`, use `bash ~/.claude/skills/pocketbase-managing/scripts/pb-init.sh`).
+
+**Example invocation pattern**:
+```bash
+# From the user's project directory:
+cd /path/to/user/project
+bash ~/.claude/skills/pocketbase-managing/scripts/pb-init.sh args...
+```
+
+**Go commands**: Always use `go -C pb` from workspace root. Never `cd` into `pb/` directly.
 
 ## Setup Steps
 
@@ -29,11 +43,7 @@ Ask the user for the following values:
 
 ### Step 2: Initialize Project
 
-Run **PB Init** (see Operations below) with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies:
-
-```bash
-bash scripts/pb-init.sh <PB_MODULE_NAME> <PB_PORT> <PB_ADMIN_EMAIL> <PB_ADMIN_PASSWORD>
-```
+Run **PB Init** (see Operations below) with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies.
 
 ### Step 3: Verify Setup
 
@@ -50,12 +60,14 @@ Expected outcome:
 
 All operations source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PASSWORD`.
 
+**Note**: `<SKILL_PATH>` below represents the full path to this skill directory. All scripts must be invoked from the project root directory.
+
 | Operation    | Script                                                                                      | Description                                                                                   |
 | ------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **PB Init**  | `bash scripts/pb-init.sh <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
-| **PB Stop**  | `bash scripts/pb-stop.sh`                                | Kill existing PocketBase instance on the configured port                                      |
-| **PB Dev**   | `bash scripts/pb-dev.sh`                                 | Stop existing instance, then start the dev server                                             |
-| **PB Reset** | `bash scripts/pb-reset.sh`                               | Stop instance, wipe data, create superuser, start fresh                                       |
+| **PB Init**  | `bash <SKILL_PATH>/scripts/pb-init.sh <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
+| **PB Stop**  | `bash <SKILL_PATH>/scripts/pb-stop.sh`                                | Kill existing PocketBase instance on the configured port                                      |
+| **PB Dev**   | `bash <SKILL_PATH>/scripts/pb-dev.sh`                                 | Stop existing instance, then start the dev server                                             |
+| **PB Reset** | `bash <SKILL_PATH>/scripts/pb-reset.sh`                               | Stop instance, wipe data, create superuser, start fresh                                       |
 
 ## Iteration Workflow
 
