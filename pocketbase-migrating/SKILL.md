@@ -17,9 +17,9 @@ Tooling for authoring, inspecting, and validating PocketBase schema migrations. 
 
 | Operation           | Script                                                                                       | Description                                              |
 | ------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **Migrate Create**  | `bash .github/skills/pocketbase-migrating/scripts/pb-migrate-create.sh <description> [type]` | Generate a timestamped migration file with boilerplate   |
-| **Schema Inspect**  | `bash .github/skills/pocketbase-migrating/scripts/pb-schema-inspect.sh [collection-name]`    | Dump live schema as JSON (all collections or one)        |
-| **Schema Validate** | `bash .github/skills/pocketbase-migrating/scripts/pb-schema-validate.sh`                     | Wipe data and dry-run all migrations to check for errors |
+| **Migrate Create**  | `bash scripts/pb-migrate-create.sh <description> [type]` | Generate a timestamped migration file with boilerplate   |
+| **Schema Inspect**  | `bash scripts/pb-schema-inspect.sh [collection-name]`    | Dump live schema as JSON (all collections or one)        |
+| **Schema Validate** | `bash scripts/pb-schema-validate.sh`                     | Wipe data and dry-run all migrations to check for errors |
 
 ### Migrate Create
 
@@ -27,13 +27,13 @@ Generates a new migration file in `pb/pb_migrations/` with the correct timestamp
 
 ```bash
 # Create a new collection
-bash .github/skills/pocketbase-migrating/scripts/pb-migrate-create.sh create_posts create
+bash scripts/pb-migrate-create.sh create_posts create
 
 # Modify an existing collection
-bash .github/skills/pocketbase-migrating/scripts/pb-migrate-create.sh add_featured_to_posts modify
+bash scripts/pb-migrate-create.sh add_featured_to_posts modify
 
 # Seed data into a collection
-bash .github/skills/pocketbase-migrating/scripts/pb-migrate-create.sh seed_categories seed
+bash scripts/pb-migrate-create.sh seed_categories seed
 ```
 
 The `type` argument selects the boilerplate template:
@@ -50,10 +50,10 @@ Requires the server to be running.
 
 ```bash
 # Dump all collections
-bash .github/skills/pocketbase-migrating/scripts/pb-schema-inspect.sh
+bash scripts/pb-schema-inspect.sh
 
 # Dump a specific collection
-bash .github/skills/pocketbase-migrating/scripts/pb-schema-inspect.sh posts
+bash scripts/pb-schema-inspect.sh posts
 ```
 
 ### Schema Validate
@@ -61,7 +61,7 @@ bash .github/skills/pocketbase-migrating/scripts/pb-schema-inspect.sh posts
 Stops the server, wipes `pb_data`, and runs all migrations to check for errors. Does NOT restart the server — run `pb-reset.sh` or `pb-dev.sh` afterward.
 
 ```bash
-bash .github/skills/pocketbase-migrating/scripts/pb-schema-validate.sh
+bash scripts/pb-schema-validate.sh
 ```
 
 ## Workflow
@@ -70,20 +70,20 @@ Follow this loop when adding or modifying collections:
 
 1. **Inspect** current schema to understand what exists
    ```bash
-   bash .github/skills/pocketbase-migrating/scripts/pb-schema-inspect.sh
+   bash scripts/pb-schema-inspect.sh
    ```
 2. **Generate** a migration boilerplate
    ```bash
-   bash .github/skills/pocketbase-migrating/scripts/pb-migrate-create.sh create_posts create
+   bash scripts/pb-migrate-create.sh create_posts create
    ```
 3. **Edit** the generated file — fill in collection name, fields, rules, and indexes
 4. **Validate** — dry-run all migrations to catch errors
    ```bash
-   bash .github/skills/pocketbase-migrating/scripts/pb-schema-validate.sh
+   bash scripts/pb-schema-validate.sh
    ```
 5. **Reset & verify** — start fresh server and check admin dashboard
    ```bash
-   bash .github/skills/pocketbase-managing/scripts/pb-reset.sh
+   bash scripts/pb-reset.sh
    ```
 
 ## Migration Authoring Rules

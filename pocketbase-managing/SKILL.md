@@ -32,7 +32,7 @@ Ask the user for the following values:
 Run **PB Init** (see Operations below) with all four configuration values. This creates the `pb/` directory structure, writes `pb/main.go`, creates `pb/.env`, adds PocketBase entries to `.gitignore`, initializes the Go module, and installs dependencies:
 
 ```bash
-bash .github/skills/pocketbase-managing/scripts/pb-init.sh <PB_MODULE_NAME> <PB_PORT> <PB_ADMIN_EMAIL> <PB_ADMIN_PASSWORD>
+bash scripts/pb-init.sh <PB_MODULE_NAME> <PB_PORT> <PB_ADMIN_EMAIL> <PB_ADMIN_PASSWORD>
 ```
 
 ### Step 3: Verify Setup
@@ -52,10 +52,10 @@ All operations source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_P
 
 | Operation    | Script                                                                                      | Description                                                                                   |
 | ------------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **PB Init**  | `bash .github/skills/pocketbase-managing/scripts/pb-init.sh <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
-| **PB Stop**  | `bash .github/skills/pocketbase-managing/scripts/pb-stop.sh`                                | Kill existing PocketBase instance on the configured port                                      |
-| **PB Dev**   | `bash .github/skills/pocketbase-managing/scripts/pb-dev.sh`                                 | Stop existing instance, then start the dev server                                             |
-| **PB Reset** | `bash .github/skills/pocketbase-managing/scripts/pb-reset.sh`                               | Stop instance, wipe data, create superuser, start fresh                                       |
+| **PB Init**  | `bash scripts/pb-init.sh <MODULE> <PORT> <EMAIL> <PASS>` | Full project setup: directories, `main.go`, `pb/.env`, `.gitignore`, Go module, `go mod tidy` |
+| **PB Stop**  | `bash scripts/pb-stop.sh`                                | Kill existing PocketBase instance on the configured port                                      |
+| **PB Dev**   | `bash scripts/pb-dev.sh`                                 | Stop existing instance, then start the dev server                                             |
+| **PB Reset** | `bash scripts/pb-reset.sh`                               | Stop instance, wipe data, create superuser, start fresh                                       |
 
 ## Iteration Workflow
 
