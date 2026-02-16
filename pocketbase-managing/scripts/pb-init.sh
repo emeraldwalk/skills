@@ -13,11 +13,6 @@ PB_PORT="${2:-}"
 PB_ADMIN_EMAIL="${3:-}"
 PB_ADMIN_PASSWORD="${4:-}"
 
-# Create directory structure
-mkdir -p "$PB_DIR/pb_hooks"
-[ -f "$PB_DIR/pb_hooks/.gitkeep" ] || touch "$PB_DIR/pb_hooks/.gitkeep"
-echo "Directory structure ready."
-
 # Create main.go if it doesn't exist
 if [ ! -f "$PB_DIR/main.go" ]; then
   cat > "$PB_DIR/main.go" << 'GOEOF'
