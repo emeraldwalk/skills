@@ -49,7 +49,7 @@ COMMANDS:
       Dry-run all migrations to check for errors
       Wipes pb_data and runs migrations without starting server
 
-  help
+  --help, -h
       Show this help message
 
 EXAMPLES:

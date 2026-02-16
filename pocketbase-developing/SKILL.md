@@ -17,6 +17,8 @@ Covers project setup, dev server operations, migration creation, schema inspecti
 
 **Script Location**: This skill bundles `scripts/pbdev.sh`. Use the absolute path to the skill directory when invoking it.
 
+> **Discovery**: Use `bash scripts/pbdev.sh --help` to discover all available commands and options. Do not read the script source directly; rely on the CLI help output for authoritative usage details.
+
 **Go commands**: Always use `go -C pb` from workspace root. Never `cd` into `pb/` directly.
 
 ## Setup Steps
@@ -85,9 +87,9 @@ All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PAS
 
 ### Help
 
-| Command | Description                                      |
-| ------- | ------------------------------------------------ |
-| `help`  | Show help message with all commands and examples |
+| Command    | Description                                      |
+| ---------- | ------------------------------------------------ |
+| `--help`   | Show help message with all commands and examples |
 
 ## Iteration Workflow
 
