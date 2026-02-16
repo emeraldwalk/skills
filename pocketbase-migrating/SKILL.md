@@ -9,7 +9,7 @@ Tooling for authoring, inspecting, and validating PocketBase schema migrations. 
 
 ## Prerequisites
 
-- PocketBase project already initialized (via `pocketbase-managing` skill's **PB Init**)
+- PocketBase project already initialized (via `pocketbase-developing` skill's **PB Init**)
 - Go 1.23+ installed and on PATH
 - For **Inspect**: PocketBase server must be running
 
@@ -23,8 +23,8 @@ Tooling for authoring, inspecting, and validating PocketBase schema migrations. 
 
 **Note**: `<SKILL_PATH>` below represents the full path to this skill directory. All scripts must be invoked from the project root directory.
 
-| Operation           | Script                                                                                       | Description                                              |
-| ------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Operation           | Script                                                                | Description                                              |
+| ------------------- | --------------------------------------------------------------------- | -------------------------------------------------------- |
 | **Migrate Create**  | `bash <SKILL_PATH>/scripts/pb-migrate-create.sh <description> [type]` | Generate a timestamped migration file with boilerplate   |
 | **Schema Inspect**  | `bash <SKILL_PATH>/scripts/pb-schema-inspect.sh [collection-name]`    | Dump live schema as JSON (all collections or one)        |
 | **Schema Validate** | `bash <SKILL_PATH>/scripts/pb-schema-validate.sh`                     | Wipe data and dry-run all migrations to check for errors |
@@ -91,7 +91,7 @@ Follow this loop when adding or modifying collections:
    ```bash
    bash scripts/pb-schema-validate.sh
    ```
-5. **Reset & verify** — start fresh server and check admin dashboard (uses pocketbase-managing skill)
+5. **Reset & verify** — start fresh server and check admin dashboard (uses pocketbase-developing skill)
    ```bash
    bash <POCKETBASE_MANAGING_SKILL_PATH>/scripts/pb-reset.sh
    ```
@@ -190,4 +190,4 @@ const collection = new Collection({
 
 ## Reference
 
-For field types, API rules, and the full JS migration API, see the **pocketbase-managing** skill's [references/migrations.md](../pocketbase-managing/references/migrations.md).
+For field types, API rules, and the full JS migration API, see the **pocketbase-developing** skill's [references/migrations.md](../pocketbase-developing/references/migrations.md).

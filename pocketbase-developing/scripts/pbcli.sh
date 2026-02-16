@@ -50,7 +50,7 @@ EXAMPLES:
 NOTES:
   - All commands must be run from the project root directory
   - Configuration is stored in pb/.env (PB_PORT, PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD)
-  - Script path: Use full absolute path (e.g., ~/.claude/skills/pocketbase-managing/scripts/pbdev.sh)
+  - Script path: Use full absolute path (e.g., ~/.claude/skills/pocketbase-developing/scripts/pbdev.sh)
 EOF
 }
 

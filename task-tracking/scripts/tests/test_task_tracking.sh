@@ -165,7 +165,7 @@ bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Full task" \
   --file "src/app.ts" --file "tsconfig.json" \
   --doc "docs/PLAN.md" \
-  --skill "pocketbase-managing" \
+  --skill "pocketbase-developing" \
   --ac "Passes tests" --ac "No regressions" \
   --verify-command "npm test" >/dev/null
 assert_json_eq "2 files" "$(T)/$l/task-01.json" ".context.files | length" "2"
@@ -174,7 +174,7 @@ assert_json_eq "second file" "$(T)/$l/task-01.json" ".context.files[1]" "tsconfi
 assert_json_eq "1 doc" "$(T)/$l/task-01.json" ".context.docs | length" "1"
 assert_json_eq "doc value" "$(T)/$l/task-01.json" ".context.docs[0]" "docs/PLAN.md"
 assert_json_eq "1 skill" "$(T)/$l/task-01.json" ".context.skills | length" "1"
-assert_json_eq "skill value" "$(T)/$l/task-01.json" ".context.skills[0]" "pocketbase-managing"
+assert_json_eq "skill value" "$(T)/$l/task-01.json" ".context.skills[0]" "pocketbase-developing"
 assert_json_eq "2 ac" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "2"
 assert_json_eq "verify type" "$(T)/$l/task-01.json" ".verification.type" "command"
 assert_json_eq "verify value" "$(T)/$l/task-01.json" ".verification.value" "npm test"
@@ -360,10 +360,10 @@ bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
 bash "$S" update-task "$l" task-01 in_progress --note "Adding context" \
   --doc "README.md" --doc "API.md" \
-  --skill "pocketbase-managing" >/dev/null
+  --skill "pocketbase-developing" >/dev/null
 assert_json_eq "2 docs" "$(T)/$l/task-01.json" ".context.docs | length" "2"
 assert_json_eq "1 skill" "$(T)/$l/task-01.json" ".context.skills | length" "1"
-assert_json_eq "skill value" "$(T)/$l/task-01.json" ".context.skills[0]" "pocketbase-managing"
+assert_json_eq "skill value" "$(T)/$l/task-01.json" ".context.skills[0]" "pocketbase-developing"
 teardown
 
 echo "-- update with acceptance criteria"

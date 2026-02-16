@@ -1,5 +1,5 @@
 ---
-name: pocketbase-managing
+name: pocketbase-developing
 description: Sets up and manages PocketBase projects, including project initialization and dev server lifecycle. Use when bootstrapping a new PocketBase project, starting or stopping the dev server, or resetting the database.
 ---
 
@@ -15,14 +15,14 @@ Covers initial project setup, dev server operations, schema iteration workflow, 
 
 **Working Directory**: The CLI script MUST be executed from the **user's project root directory** (where the `pb/` directory will be or is located), NOT from the skill directory. The script uses `$(pwd)` to determine the project root.
 
-**Script Path**: The CLI is located at `<SKILL_PATH>/scripts/pbdev.sh`. When invoking it, use the full absolute path to the skill (e.g., `bash ~/.claude/skills/pocketbase-managing/scripts/pbdev.sh`).
+**Script Path**: The CLI is located at `<SKILL_PATH>/scripts/pbdev.sh`. When invoking it, use the full absolute path to the skill (e.g., `bash ~/.claude/skills/pocketbase-developing/scripts/pbdev.sh`).
 
 **Example invocation pattern**:
 
 ```bash
 # From the user's project directory:
 cd /path/to/user/project
-bash ~/.claude/skills/pocketbase-managing/scripts/pbdev.sh <command> [options]
+bash ~/.claude/skills/pocketbase-developing/scripts/pbdev.sh <command> [options]
 ```
 
 **Go commands**: Always use `go -C pb` from workspace root. Never `cd` into `pb/` directly.
