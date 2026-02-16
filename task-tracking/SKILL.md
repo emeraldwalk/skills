@@ -17,6 +17,10 @@ This skill enables agents to manage tasks using the bundled bash script `task_tr
   ```bash
   bash scripts/task_tracking.sh create-list <list-name>
   ```
+- **List available task lists:**
+  ```bash
+  bash scripts/task_tracking.sh list-lists
+  ```
 - **Add a task:**
   ```bash
   bash scripts/task_tracking.sh add-task <list-name> "<description>" [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"]

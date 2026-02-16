@@ -108,6 +108,37 @@ assert_contains "error message" "already exists" "$out"
 teardown
 
 echo ""
+echo "=== list-lists ==="
+
+echo "-- returns empty array when no lists exist"
+setup
+out=$(bash "$S" list-lists)
+assert_eq "empty array" "[]" "$out"
+teardown
+
+echo "-- returns single list"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+out=$(bash "$S" list-lists)
+assert_contains "contains list name" "\"$l\"" "$out"
+assert_contains "is JSON array" "[" "$out"
+teardown
+
+echo "-- returns multiple lists"
+setup; l1=$(L); TEST_NUM=$((TEST_NUM + 1)); l2=$(L); TEST_NUM=$((TEST_NUM + 1)); l3=$(L)
+bash "$S" create-list "$l1" >/dev/null
+bash "$S" create-list "$l2" >/dev/null
+bash "$S" create-list "$l3" >/dev/null
+out=$(bash "$S" list-lists)
+assert_contains "contains list1" "\"$l1\"" "$out"
+assert_contains "contains list2" "\"$l2\"" "$out"
+assert_contains "contains list3" "\"$l3\"" "$out"
+# Verify it's valid JSON with 3 elements
+count=$(echo "$out" | jq 'length')
+assert_eq "3 lists in array" "3" "$count"
+teardown
+
+echo ""
 echo "=== add-task ==="
 
 echo "-- minimal task (no optional flags)"

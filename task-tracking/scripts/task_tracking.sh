@@ -214,6 +214,27 @@ cmd_next() {
   echo "$task" | jq '.'
 }
 
+cmd_list_lists() {
+  if [[ ! -d "$TASKS_DIR" ]]; then
+    echo "[]"
+    return 0
+  fi
+
+  local lists=()
+  for dir in "$TASKS_DIR"/*; do
+    if [[ -d "$dir" && -f "$dir/_task-list.json" ]]; then
+      lists+=("$(basename "$dir")")
+    fi
+  done
+
+  if [[ ${#lists[@]} -eq 0 ]]; then
+    echo "[]"
+    return 0
+  fi
+
+  printf '%s\n' "${lists[@]}" | jq -R . | jq -s .
+}
+
 cmd_update_task() {
   local list_name="$1" task_id="$2" status="$3"
   shift 3
@@ -356,6 +377,7 @@ Agent Task CLI (bash)
 
 Commands:
   create-list <name>
+  list-lists
   add-task <list> <desc> [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>]
   next <list> [--skip-failed] [--claim <AGENT_ID>]
   update-task <list> <task-id> <status> [--note <note>] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>]
@@ -370,6 +392,7 @@ shift 2>/dev/null || true
 
 case "$command" in
   create-list)  cmd_create_list "$@" ;;
+  list-lists)   cmd_list_lists "$@" ;;
   add-task)     cmd_add_task "$@" ;;
   next)         cmd_next "$@" ;;
   update-task)  cmd_update_task "$@" ;;
