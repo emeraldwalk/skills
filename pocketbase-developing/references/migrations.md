@@ -1,5 +1,19 @@
 # JS Migration Reference
 
+> Official docs: https://pocketbase.io/docs/js-migrations/
+
+## Contents
+- [File naming](#file-naming)
+- [Migration structure](#migration-structure)
+- [Create a collection](#create-a-collection)
+- [Default users collection](#default-users-collection)
+- [Modify an existing collection](#modify-an-existing-collection)
+- [Relation lookup by name](#relation-lookup-by-name)
+- [Seed data in migrations](#seed-data-in-migrations)
+- [Raw SQL](#raw-sql)
+- [Field types quick reference](#field-types-quick-reference)
+- [API rules quick reference](#api-rules-quick-reference)
+
 Migration files live in `pb/pb_migrations/` and run in filename order on server start.
 
 ## File Naming
@@ -30,6 +44,8 @@ Both callbacks receive a transactional `app` instance.
 
 ## Create a Collection
 
+> **Fields must be plain objects** with a `type` property — do not use class constructors (`new TextField()`, etc.), they are silently ignored.
+
 ```javascript
 migrate((app) => {
   const collection = new Collection({
@@ -41,17 +57,12 @@ migrate((app) => {
     updateRule: "author = @request.auth.id",
     deleteRule: "author = @request.auth.id",
     fields: [
-      new TextField({ name: "title", required: true, max: 200 }),
-      new EditorField({ name: "body" }),
-      new SelectField({ name: "status", values: ["draft", "published"], maxSelect: 1 }),
-      new RelationField({
-        name: "author",
-        collectionId: "COLLECTION_ID_HERE",
-        maxSelect: 1,
-        cascadeDelete: false
-      }),
-      new AutodateField({ name: "created", onCreate: true, onUpdate: false }),
-      new AutodateField({ name: "updated", onCreate: true, onUpdate: true }),
+      { type: "text", name: "title", required: true, max: 200 },
+      { type: "editor", name: "body" },
+      { type: "select", name: "status", values: ["draft", "published"], maxSelect: 1 },
+      { type: "relation", name: "author", collectionId: "COLLECTION_ID_HERE", maxSelect: 1, cascadeDelete: false },
+      { type: "autodate", name: "created", onCreate: true, onUpdate: false },
+      { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
     ],
     indexes: [
       "CREATE INDEX idx_posts_status ON posts (status)",
@@ -75,7 +86,7 @@ migrate((app) => {
   const collection = app.findCollectionByNameOrId("posts")
 
   // Add a field
-  collection.fields.add(new BoolField({ name: "featured" }))
+  collection.fields.add({ type: "bool", name: "featured" })
 
   // Remove a field
   collection.fields.removeByName("old_field")
@@ -96,28 +107,41 @@ migrate((app) => {
 })
 ```
 
-## Relation Lookup by Name
+## Multiple Collections and Relations
 
-When creating relations, you need the target collection's ID. Look it up by name:
+Multiple collections can be created in one migration — call `app.save()` for each. For relations, look up referenced collection IDs at the top of the migration before defining any fields:
 
 ```javascript
 migrate((app) => {
   const users = app.findCollectionByNameOrId("users")
 
-  const collection = new Collection({
+  const posts = new Collection({
     type: "base",
     name: "posts",
     fields: [
-      new TextField({ name: "title", required: true }),
-      new RelationField({
-        name: "author",
-        collectionId: users.id,     // resolved at migration time
-        maxSelect: 1,
-        cascadeDelete: false,
-      }),
+      { type: "text", name: "title", required: true },
+      { type: "relation", name: "author", collectionId: users.id, maxSelect: 1, cascadeDelete: false },
+      { type: "autodate", name: "created", onCreate: true, onUpdate: false },
+      { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
     ],
   })
-  app.save(collection)
+  app.save(posts)
+
+  const comments = new Collection({
+    type: "base",
+    name: "comments",
+    fields: [
+      { type: "text", name: "body", required: true },
+      { type: "relation", name: "post", collectionId: posts.id, maxSelect: 1, cascadeDelete: true },
+      { type: "relation", name: "author", collectionId: users.id, maxSelect: 1, cascadeDelete: false },
+      { type: "autodate", name: "created", onCreate: true, onUpdate: false },
+      { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
+    ],
+  })
+  app.save(comments)
+}, (app) => {
+  app.delete(app.findCollectionByNameOrId("comments"))
+  app.delete(app.findCollectionByNameOrId("posts"))
 })
 ```
 
@@ -144,22 +168,22 @@ migrate((app) => {
 
 ## Field Types Quick Reference
 
-| Constructor | Key Options |
-|-------------|-------------|
-| `TextField` | `required`, `min`, `max`, `pattern` |
-| `NumberField` | `required`, `min`, `max`, `onlyInt` |
-| `BoolField` | `required` |
-| `EmailField` | `required`, `onlyDomains`, `exceptDomains` |
-| `URLField` | `required`, `onlyDomains`, `exceptDomains` |
-| `DateField` | `required` |
-| `AutodateField` | `onCreate`, `onUpdate` |
-| `SelectField` | `values` (required), `maxSelect` |
-| `FileField` | `maxSelect`, `maxSize`, `mimeTypes`, `thumbs`, `protected` |
-| `RelationField` | `collectionId` (required), `maxSelect`, `cascadeDelete` |
-| `JSONField` | `required` (nullable unlike other fields) |
-| `EditorField` | `required`, `maxSize`, `convertURLs` |
-| `PasswordField` | `required`, `min`, `max`, `cost` |
-| `GeoPointField` | `required` |
+| `type` value | Key Options |
+|--------------|-------------|
+| `"text"` | `required`, `min`, `max`, `pattern` |
+| `"number"` | `required`, `min`, `max`, `onlyInt` |
+| `"bool"` | `required` |
+| `"email"` | `required`, `onlyDomains`, `exceptDomains` |
+| `"url"` | `required`, `onlyDomains`, `exceptDomains` |
+| `"date"` | `required` |
+| `"autodate"` | `onCreate`, `onUpdate` |
+| `"select"` | `values` (required), `maxSelect` |
+| `"file"` | `maxSelect`, `maxSize`, `mimeTypes`, `thumbs`, `protected` |
+| `"relation"` | `collectionId` (required), `maxSelect`, `cascadeDelete` |
+| `"json"` | `required` (nullable unlike other fields) |
+| `"editor"` | `required`, `maxSize`, `convertURLs` |
+| `"password"` | `required`, `min`, `max`, `cost` |
+| `"geopoint"` | `required` |
 
 ## API Rules Quick Reference
 

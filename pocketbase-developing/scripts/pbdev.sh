@@ -340,6 +340,11 @@ cmd_migration_create() {
 /// <reference path="../pb_data/types.d.ts" />
 
 migrate((app) => {
+  // Multiple collections can be created in one migration — just call app.save() for each.
+  // For relations, look up referenced collection IDs before defining fields:
+  // const users = app.findCollectionByNameOrId("users")
+  // const posts = app.findCollectionByNameOrId("posts")
+
   const collection = new Collection({
     type: "base",          // "base", "auth", or "view"
     name: "COLLECTION_NAME",
@@ -348,24 +353,22 @@ migrate((app) => {
     createRule: null,
     updateRule: null,
     deleteRule: null,
+    // Fields must be plain objects with a "type" property — do NOT use constructors like new TextField()
     fields: [
-      // new TextField({ name: "title", required: true, min: 1, max: 200 }),
-      // new NumberField({ name: "count", required: false, min: 0, onlyInt: true }),
-      // new BoolField({ name: "active" }),
-      // new EmailField({ name: "contactEmail" }),
-      // new URLField({ name: "website" }),
-      // new EditorField({ name: "body", required: true }),
-      // new DateField({ name: "publishedAt" }),
-      // new AutodateField({ name: "created", onCreate: true, onUpdate: false }),
-      // new AutodateField({ name: "updated", onCreate: true, onUpdate: true }),
-      // new SelectField({ name: "status", values: ["draft", "published"], maxSelect: 1, required: true }),
-      // new FileField({ name: "avatar", maxSelect: 1, maxSize: 5242880, mimeTypes: ["image/jpeg", "image/png"] }),
-      // new JSONField({ name: "metadata" }),
-      // new GeoPointField({ name: "location" }),
-
-      // Relations — ALWAYS look up the target collection ID at runtime:
-      // const targetCol = app.findCollectionByNameOrId("target_collection_name")
-      // new RelationField({ name: "author", collectionId: targetCol.id, maxSelect: 1, cascadeDelete: false }),
+      // { type: "text", name: "title", required: true, min: 1, max: 200 },
+      // { type: "number", name: "count", required: false, min: 0, onlyInt: true },
+      // { type: "bool", name: "active" },
+      // { type: "email", name: "contactEmail" },
+      // { type: "url", name: "website" },
+      // { type: "editor", name: "body", required: true },
+      // { type: "date", name: "publishedAt" },
+      // { type: "autodate", name: "created", onCreate: true, onUpdate: false },
+      // { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
+      // { type: "select", name: "status", values: ["draft", "published"], maxSelect: 1, required: true },
+      // { type: "file", name: "avatar", maxSelect: 1, maxSize: 5242880, mimeTypes: ["image/jpeg", "image/png"] },
+      // { type: "json", name: "metadata" },
+      // { type: "geopoint", name: "location" },
+      // { type: "relation", name: "author", collectionId: users.id, maxSelect: 1, cascadeDelete: false },
     ],
     indexes: [
       // "CREATE INDEX idx_COLLECTION_NAME_field ON COLLECTION_NAME (field)",
@@ -387,8 +390,8 @@ MIGEOF
 migrate((app) => {
   const collection = app.findCollectionByNameOrId("COLLECTION_NAME")
 
-  // Add a field:
-  // collection.fields.add(new TextField({ name: "subtitle", max: 200 }))
+  // Add a field (plain object with type property):
+  // collection.fields.add({ type: "text", name: "subtitle", max: 200 })
 
   // Remove a field:
   // collection.fields.removeByName("old_field")
@@ -401,7 +404,7 @@ migrate((app) => {
   // collection.listRule = "@request.auth.id != ''"
 
   // Add an index:
-  // collection.addIndex("idx_name", false, "field_name", "")
+  // collection.indexes.push("CREATE INDEX idx_COLLECTION_NAME_field ON COLLECTION_NAME (field)")
 
   app.save(collection)
 }, (app) => {
