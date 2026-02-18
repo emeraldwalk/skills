@@ -63,3 +63,17 @@ The task tracking system is designed to maintain data integrity through the scri
 - Use agent IDs to claim tasks for specific agents.
 - Log progress and errors using the `update-task` command with notes.
 - If the script fails, stop and notify the user - do not attempt manual workarounds.
+
+## Writing Self-Sufficient Tasks
+
+When creating a task, populate enough context for a zero-context agent to succeed without follow-up questions:
+
+**Description**: State the current state and desired outcome, not just the task name.
+- Poor: `"Fix free book button"`
+- Good: `"Free products show 'Add to Cart' — change button label to 'Get Free' for products with price = 0"`
+
+**Before running `add-task`**, search the codebase to identify relevant files, then include them via `--file`.
+
+**Acceptance criteria** (`--ac`) should describe observable outcomes, not restate the description.
+
+**Verification**: Use `--verify-command` for automated checks, `--verify-instruction` when human judgment is needed.
