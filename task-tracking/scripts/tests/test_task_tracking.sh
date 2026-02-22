@@ -293,6 +293,44 @@ out=$(bash "$S" next "nonexistent-$l" 2>&1 || true)
 assert_contains "error message" "List not found" "$out"
 teardown
 
+echo "-- skips blocked task, returns first unblocked"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Dep task" >/dev/null
+bash "$S" add-task "$l" "Blocked task" --depends-on task-01 >/dev/null
+bash "$S" add-task "$l" "Unblocked task" >/dev/null
+bash "$S" update-status "$l" task-01 completed "done" >/dev/null
+# task-01 is completed (skipped by next), task-02 is now unblocked (dep completed), task-03 has no deps
+# next should return task-02 (first non-completed, unblocked)
+out=$(bash "$S" next "$l")
+assert_contains "returns first unblocked task-02" '"id": "task-02"' "$out"
+teardown
+
+echo "-- skips blocked task when dep is still todo, returns later unblocked task"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Dep task" >/dev/null
+bash "$S" add-task "$l" "Blocked task" --depends-on task-01 >/dev/null
+bash "$S" add-task "$l" "Third task no deps" >/dev/null
+# task-01 is todo (dep not complete), task-02 is blocked by task-01, task-03 has no deps
+# next should skip task-01 first? No — task-01 has no deps, it is unblocked. Returns task-01.
+# To test skip-blocked: we need task-01 to be skipped. Use --skip-failed with task-01 failed:
+bash "$S" update-status "$l" task-01 failed "failed" >/dev/null
+out=$(bash "$S" next "$l" --skip-failed)
+# task-01 is failed+skip, task-02 is blocked (dep task-01 not completed), task-03 is unblocked
+assert_contains "skips failed task-01 and blocked task-02, returns task-03" '"id": "task-03"' "$out"
+teardown
+
+echo "-- blocked task becomes available after dependency completes"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Dep task" >/dev/null
+bash "$S" add-task "$l" "Dependent task" --depends-on task-01 >/dev/null
+bash "$S" update-status "$l" task-01 completed "done" >/dev/null
+out=$(bash "$S" next "$l")
+assert_contains "dep is complete, returns task-02" '"id": "task-02"' "$out"
+teardown
+
 echo ""
 echo "=== update-status ==="
 
@@ -484,6 +522,36 @@ setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 out=$(bash "$S" update-task "$l" task-99 --description "x" 2>&1 || true)
 assert_contains "error message" "not found" "$out"
+teardown
+
+echo ""
+echo "=== list-tasks ==="
+
+echo "-- summary shows depends_on and claimed_by"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Dep task" >/dev/null
+bash "$S" add-task "$l" "Dependent task" --depends-on task-01 >/dev/null
+bash "$S" next "$l" --claim agent-1 >/dev/null
+out=$(bash "$S" list-tasks "$l")
+# task-01 should show claimed_by and empty depends_on
+claimed=$(echo "$out" | jq -r '.[0].claimed_by')
+assert_eq "claimed_by in summary" "agent-1" "$claimed"
+# task-02 should show depends_on
+dep=$(echo "$out" | jq -r '.[1].depends_on[0]')
+assert_eq "depends_on in summary" "task-01" "$dep"
+teardown
+
+echo "-- json format shows depends_on"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Dep task" >/dev/null
+bash "$S" add-task "$l" "Dependent task" --depends-on task-01 >/dev/null
+out=$(bash "$S" list-tasks "$l" --format json)
+dep=$(echo "$out" | jq -r '.tasks[1].depends_on[0]')
+assert_eq "depends_on in json format" "task-01" "$dep"
+name=$(echo "$out" | jq -r '.name')
+assert_eq "json format preserves list name" "$l" "$name"
 teardown
 
 echo ""

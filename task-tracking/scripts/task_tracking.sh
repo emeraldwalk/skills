@@ -85,7 +85,7 @@ cmd_add_task() {
   fi
 
   # Validate depends_on task IDs exist
-  for dep_id in "${depends_on_items[@]}"; do
+  for dep_id in "${depends_on_items[@]+"${depends_on_items[@]}"}"; do
     if [[ ! -f "${list_dir}/${dep_id}.json" ]]; then
       echo "Error: Dependency task '${dep_id}' not found in list '${list_name}'."
       return 1
@@ -183,52 +183,60 @@ cmd_next() {
     return 1
   fi
 
-  # Find first matching task from index
-  local filter='.tasks[] | select(.status != "completed")'
-  if [[ "$skip_failed" == "true" ]]; then
-    filter="$filter"' | select(.status != "failed")'
-  fi
-  filter="[${filter}] | first"
+  # Iterate through candidate tasks in order, skipping blocked ones
+  local candidate_ids
+  candidate_ids=$(jq -r '.tasks[] | select(.status != "completed") | .id' "$path")
 
-  local summary
-  summary=$(jq "$filter" "$path")
+  local task_id="" task=""
 
-  if [[ "$summary" == "null" || -z "$summary" ]]; then
+  while IFS= read -r cid; do
+    [[ -z "$cid" ]] && continue
+
+    local cfile="${list_dir}/${cid}.json"
+    [[ -f "$cfile" ]] || continue
+
+    local cstatus
+    cstatus=$(jq -r '.status' "$cfile")
+
+    # Apply --skip-failed
+    if [[ "$skip_failed" == "true" && "$cstatus" == "failed" ]]; then
+      continue
+    fi
+
+    # Check all dependencies are completed
+    local deps
+    deps=$(jq -r '.depends_on // [] | .[]' "$cfile")
+    local blocked=false
+    while IFS= read -r dep_id; do
+      [[ -z "$dep_id" ]] && continue
+      local dep_file="${list_dir}/${dep_id}.json"
+      if [[ ! -f "$dep_file" ]]; then
+        blocked=true
+        break
+      fi
+      local dep_status
+      dep_status=$(jq -r '.status' "$dep_file")
+      if [[ "$dep_status" != "completed" ]]; then
+        blocked=true
+        break
+      fi
+    done <<< "$deps"
+
+    if [[ "$blocked" == "true" ]]; then
+      continue
+    fi
+
+    task_id="$cid"
+    task=$(cat "$cfile")
+    break
+  done <<< "$candidate_ids"
+
+  if [[ -z "$task_id" ]]; then
     echo "No pending tasks found."
     return 0
   fi
 
-  local task_id
-  task_id=$(echo "$summary" | jq -r '.id')
-
-  # Read full task from per-task file
   local task_file="${list_dir}/${task_id}.json"
-  local task
-  task=$(cat "$task_file")
-
-  # Check dependency satisfaction before claiming
-  local deps
-  deps=$(echo "$task" | jq -r '.depends_on // [] | .[]')
-  local unmet_deps=()
-  while IFS= read -r dep_id; do
-    [[ -z "$dep_id" ]] && continue
-    local dep_file="${list_dir}/${dep_id}.json"
-    if [[ ! -f "$dep_file" ]]; then
-      unmet_deps+=("${dep_id} (not found)")
-      continue
-    fi
-    local dep_status
-    dep_status=$(jq -r '.status' "$dep_file")
-    if [[ "$dep_status" != "completed" ]]; then
-      unmet_deps+=("${dep_id} (${dep_status})")
-    fi
-  done <<< "$deps"
-
-  if [[ ${#unmet_deps[@]} -gt 0 ]]; then
-    echo "Error: Task ${task_id} has unmet dependencies: ${unmet_deps[*]}"
-    echo "Complete the following tasks first: ${unmet_deps[*]}"
-    return 1
-  fi
 
   if [[ -n "$claim" ]]; then
     local claimed_by
@@ -380,7 +388,7 @@ cmd_update_task() {
   fi
 
   # Validate depends_on task IDs exist (if provided)
-  for dep_id in "${depends_on_items[@]}"; do
+  for dep_id in "${depends_on_items[@]+"${depends_on_items[@]}"}"; do
     if [[ ! -f "${list_dir}/${dep_id}.json" ]]; then
       echo "Error: Dependency task '${dep_id}' not found in list '${list_name}'."
       return 1
@@ -497,38 +505,40 @@ cmd_list_tasks() {
     return 1
   fi
 
+  # Helper: iterate per-task files in index order, emit each via jq filter
+  _list_tasks_in_order() {
+    local jq_filter="$1"
+    local order
+    order=$(jq -r '.tasks[].id' "$path")
+    local task_files=("${list_dir}"/task-*.json)
+    if [[ ! -f "${task_files[0]}" ]]; then
+      echo "[]"
+      return 0
+    fi
+    local result="[" first=true
+    while IFS= read -r task_id; do
+      local tf="${list_dir}/${task_id}.json"
+      [[ -f "$tf" ]] || continue
+      if [[ "$first" == "true" ]]; then first=false; else result+=","; fi
+      result+=$(jq "$jq_filter" "$tf")
+    done <<< "$order"
+    result+="]"
+    echo "$result" | jq '.'
+  }
+
   case "$format" in
-    json)
-      # Return the full index JSON
-      cat "$path"
-      ;;
     full)
-      # Return array of full task objects
-      local task_files=("${list_dir}"/task-*.json)
-      if [[ ! -f "${task_files[0]}" ]]; then
-        echo "[]"
-        return 0
-      fi
-      local order
-      order=$(jq -r '.tasks[].id' "$path")
-      local result="["
-      local first=true
-      while IFS= read -r task_id; do
-        local tf="${list_dir}/${task_id}.json"
-        [[ -f "$tf" ]] || continue
-        if [[ "$first" == "true" ]]; then
-          first=false
-        else
-          result+=","
-        fi
-        result+=$(cat "$tf")
-      done <<< "$order"
-      result+="]"
-      echo "$result" | jq '.'
+      _list_tasks_in_order '.'
+      ;;
+    json)
+      # Index metadata + per-task summary array (includes depends_on, claimed_by)
+      local tasks_json
+      tasks_json=$(_list_tasks_in_order '{id,description,status,claimed_by,depends_on}')
+      jq --argjson tasks "$tasks_json" '. + {tasks: $tasks}' "$path"
       ;;
     summary|*)
-      # Return summary array from index (id, description, status)
-      jq '.tasks' "$path"
+      # Per-task summary: id, description, status, claimed_by, depends_on
+      _list_tasks_in_order '{id,description,status,claimed_by,depends_on}'
       ;;
   esac
 }
