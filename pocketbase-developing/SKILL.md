@@ -85,11 +85,12 @@ All commands source `pb/.env` for `PB_PORT`, `PB_ADMIN_EMAIL`, and `PB_ADMIN_PAS
 | `schema inspect [collection]` | Dump current schema as JSON (requires running server, optional collection name) |
 | `schema validate`             | Dry-run all migrations in clean environment to check for errors                 |
 
-### Help
+### Utilities
 
-| Command    | Description                                      |
-| ---------- | ------------------------------------------------ |
-| `--help`   | Show help message with all commands and examples |
+| Command   | Description                                                                                           |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| `install` | Copy this script to `scripts/pbdev.sh` in the current project root (creates folder, overwrites existing) |
+| `--help`  | Show help message with all commands and examples                                                      |
 
 ## Iteration Workflow
 

@@ -49,6 +49,11 @@ COMMANDS:
       Dry-run all migrations to check for errors
       Wipes pb_data and runs migrations without starting server
 
+  install
+      Copy this script to scripts/pbdev.sh in the current project directory
+      Creates the scripts/ folder if it does not exist
+      Overwrites any existing version (use to upgrade)
+
   --help, -h
       Show this help message
 
@@ -81,6 +86,9 @@ EXAMPLES:
 
   # Validate migrations
   pbdev.sh schema validate
+
+  # Install/upgrade pbdev.sh into the current project
+  pbdev.sh install
 
 NOTES:
   - All commands must be run from the project root directory
@@ -594,6 +602,19 @@ cmd_schema_validate() {
   fi
 }
 
+# Install command
+cmd_install() {
+  SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+  DEST_DIR="$ROOT_DIR/scripts"
+  DEST="$DEST_DIR/pbdev.sh"
+
+  mkdir -p "$DEST_DIR"
+  cp "$SCRIPT_PATH" "$DEST"
+  chmod +x "$DEST"
+  echo "Installed: $DEST"
+  echo "Run it with: bash scripts/pbdev.sh <command>"
+}
+
 # Main command router
 COMMAND="${1:-}"
 SUBCOMMAND="${2:-}"
@@ -641,6 +662,9 @@ case "$COMMAND" in
         exit 1
         ;;
     esac
+    ;;
+  install)
+    cmd_install
     ;;
   help|--help|-h)
     show_help
