@@ -244,7 +244,7 @@ setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "First" >/dev/null
 bash "$S" add-task "$l" "Second" >/dev/null
-bash "$S" update-task "$l" task-01 completed >/dev/null
+bash "$S" update-status "$l" task-01 completed "done" >/dev/null
 out=$(bash "$S" next "$l")
 assert_contains "returns task-02" '"id": "task-02"' "$out"
 teardown
@@ -254,7 +254,7 @@ setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "First" >/dev/null
 bash "$S" add-task "$l" "Second" >/dev/null
-bash "$S" update-task "$l" task-01 failed --note "broken" >/dev/null
+bash "$S" update-status "$l" task-01 failed "broken" >/dev/null
 out=$(bash "$S" next "$l" --skip-failed)
 assert_contains "skips failed, returns task-02" '"id": "task-02"' "$out"
 teardown
@@ -263,7 +263,7 @@ echo "-- no pending tasks"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Only" >/dev/null
-bash "$S" update-task "$l" task-01 completed >/dev/null
+bash "$S" update-status "$l" task-01 completed "done" >/dev/null
 out=$(bash "$S" next "$l")
 assert_contains "no pending message" "No pending tasks found" "$out"
 teardown
@@ -294,61 +294,86 @@ assert_contains "error message" "List not found" "$out"
 teardown
 
 echo ""
-echo "=== update-task ==="
+echo "=== update-status ==="
 
-echo "-- update to completed (no note required)"
+echo "-- update to completed"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-out=$(bash "$S" update-task "$l" task-01 completed)
+out=$(bash "$S" update-status "$l" task-01 completed "all done")
 assert_contains "success message" "updated to 'completed'" "$out"
 assert_json_eq "index status" "$(T)/$l/_task-list.json" ".tasks[0].status" "completed"
 assert_json_eq "task status" "$(T)/$l/task-01.json" ".status" "completed"
+assert_json_eq "note saved" "$(T)/$l/task-01.json" ".note" "all done"
 teardown
 
-echo "-- update to failed (requires note)"
+echo "-- update to failed"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-out=$(bash "$S" update-task "$l" task-01 failed --note "segfault in module X")
+out=$(bash "$S" update-status "$l" task-01 failed "segfault in module X")
 assert_contains "success message" "updated to 'failed'" "$out"
 assert_json_eq "index status" "$(T)/$l/_task-list.json" ".tasks[0].status" "failed"
 assert_json_eq "task status" "$(T)/$l/task-01.json" ".status" "failed"
 assert_json_eq "note saved" "$(T)/$l/task-01.json" ".note" "segfault in module X"
 teardown
 
-echo "-- rejects non-completed without note"
-setup; l=$(L)
-bash "$S" create-list "$l" >/dev/null
-bash "$S" add-task "$l" "Task" >/dev/null
-out=$(bash "$S" update-task "$l" task-01 failed 2>&1 || true)
-assert_contains "error message" "note is required" "$out"
-teardown
-
 echo "-- update nonexistent task"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
-out=$(bash "$S" update-task "$l" task-99 completed 2>&1 || true)
+out=$(bash "$S" update-status "$l" task-99 completed "done" 2>&1 || true)
 assert_contains "error message" "not found" "$out"
 teardown
 
-echo "-- status log written"
+echo "-- status log written for every update"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 failed --note "oops" >/dev/null
-bash "$S" update-task "$l" task-01 completed >/dev/null
+bash "$S" update-status "$l" task-01 failed "oops" >/dev/null
+bash "$S" update-status "$l" task-01 completed "fixed" >/dev/null
 assert_file_exists "log file" "$(T)/$l/status-log.jsonl"
 lines=$(wc -l < "$(T)/$l/status-log.jsonl" | tr -d ' ')
 assert_eq "2 log entries" "2" "$lines"
+teardown
+
+echo "-- skips completed tasks in next"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "First" >/dev/null
+bash "$S" add-task "$l" "Second" >/dev/null
+bash "$S" update-status "$l" task-01 completed "done" >/dev/null
+out=$(bash "$S" next "$l")
+assert_contains "returns task-02" '"id": "task-02"' "$out"
+teardown
+
+echo "-- skip-failed uses update-status"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "First" >/dev/null
+bash "$S" add-task "$l" "Second" >/dev/null
+bash "$S" update-status "$l" task-01 failed "broken" >/dev/null
+out=$(bash "$S" next "$l" --skip-failed)
+assert_contains "skips failed, returns task-02" '"id": "task-02"' "$out"
+teardown
+
+echo ""
+echo "=== update-task ==="
+
+echo "-- update description in per-task file and index"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Original description" >/dev/null
+out=$(bash "$S" update-task "$l" task-01 --description "Updated description")
+assert_contains "success message" "updated" "$out"
+assert_json_eq "per-task description updated" "$(T)/$l/task-01.json" ".description" "Updated description"
+assert_json_eq "index description updated" "$(T)/$l/_task-list.json" ".tasks[0].description" "Updated description"
 teardown
 
 echo "-- update with context files"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Adding files" \
-  --file "src/new.ts" --file "src/test.ts" >/dev/null
+bash "$S" update-task "$l" task-01 --file "src/new.ts" --file "src/test.ts" >/dev/null
 assert_json_eq "2 files added" "$(T)/$l/task-01.json" ".context.files | length" "2"
 assert_json_eq "first file" "$(T)/$l/task-01.json" ".context.files[0]" "src/new.ts"
 assert_json_eq "second file" "$(T)/$l/task-01.json" ".context.files[1]" "src/test.ts"
@@ -358,7 +383,7 @@ echo "-- update with docs and skills"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Adding context" \
+bash "$S" update-task "$l" task-01 \
   --doc "README.md" --doc "API.md" \
   --skill "pocketbase-developing" >/dev/null
 assert_json_eq "2 docs" "$(T)/$l/task-01.json" ".context.docs | length" "2"
@@ -370,7 +395,7 @@ echo "-- update with acceptance criteria"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Adding AC" \
+bash "$S" update-task "$l" task-01 \
   --ac "Tests pass" --ac "Coverage >80%" --ac "No lint errors" >/dev/null
 assert_json_eq "3 ac items" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "3"
 assert_json_eq "first ac" "$(T)/$l/task-01.json" ".acceptance_criteria[0]" "Tests pass"
@@ -381,8 +406,7 @@ echo "-- update with verify-command"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Adding verification" \
-  --verify-command "npm test" >/dev/null
+bash "$S" update-task "$l" task-01 --verify-command "npm test" >/dev/null
 assert_json_eq "verify type" "$(T)/$l/task-01.json" ".verification.type" "command"
 assert_json_eq "verify value" "$(T)/$l/task-01.json" ".verification.value" "npm test"
 teardown
@@ -391,17 +415,16 @@ echo "-- update with verify-instruction"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Manual verification" \
-  --verify-instruction "Check UI is responsive" >/dev/null
+bash "$S" update-task "$l" task-01 --verify-instruction "Check UI is responsive" >/dev/null
 assert_json_eq "verify type" "$(T)/$l/task-01.json" ".verification.type" "instruction"
 assert_json_eq "verify value" "$(T)/$l/task-01.json" ".verification.value" "Check UI is responsive"
 teardown
 
-echo "-- update rejects both verify flags"
+echo "-- rejects both verify flags"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-out=$(bash "$S" update-task "$l" task-01 in_progress --note "test" \
+out=$(bash "$S" update-task "$l" task-01 \
   --verify-command "a" --verify-instruction "b" 2>&1 || true)
 assert_contains "error message" "Cannot specify both" "$out"
 teardown
@@ -410,32 +433,57 @@ echo "-- update with all flags combined"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Full update" \
+bash "$S" update-task "$l" task-01 \
+  --description "New desc" \
   --file "a.ts" --file "b.ts" \
   --doc "PLAN.md" \
   --skill "task-tracking" \
   --ac "Works" --ac "Fast" \
   --verify-command "bash test.sh" >/dev/null
+assert_json_eq "description updated" "$(T)/$l/task-01.json" ".description" "New desc"
 assert_json_eq "2 files" "$(T)/$l/task-01.json" ".context.files | length" "2"
 assert_json_eq "1 doc" "$(T)/$l/task-01.json" ".context.docs | length" "1"
 assert_json_eq "1 skill" "$(T)/$l/task-01.json" ".context.skills | length" "1"
 assert_json_eq "2 ac" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "2"
 assert_json_eq "verify set" "$(T)/$l/task-01.json" ".verification.type" "command"
-assert_json_eq "status updated" "$(T)/$l/task-01.json" ".status" "in_progress"
-assert_json_eq "note set" "$(T)/$l/task-01.json" ".note" "Full update"
+assert_json_eq "status not changed" "$(T)/$l/task-01.json" ".status" "todo"
 teardown
 
-echo "-- update preserves existing fields when adding new ones"
+echo "-- update does not write log entry"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Task" >/dev/null
+bash "$S" update-task "$l" task-01 --description "New desc" >/dev/null
+log_file="$(T)/$l/status-log.jsonl"
+if [[ -f "$log_file" ]]; then
+  lines=$(wc -l < "$log_file" | tr -d ' ')
+  assert_eq "no log entries" "0" "$lines"
+else
+  echo "  PASS: no log entries (file not created)"
+  PASS=$((PASS + 1))
+fi
+teardown
+
+echo "-- update preserves status and note"
 setup; l=$(L)
 bash "$S" create-list "$l" >/dev/null
 bash "$S" add-task "$l" "Task" --file "original.ts" --ac "Original AC" >/dev/null
-bash "$S" update-task "$l" task-01 in_progress --note "Adding more" \
-  --file "new.ts" --ac "New AC" >/dev/null
-# Note: update-task REPLACES arrays, doesn't append
+bash "$S" update-status "$l" task-01 in_progress "working" >/dev/null
+bash "$S" update-task "$l" task-01 --file "new.ts" --ac "New AC" >/dev/null
+assert_json_eq "status preserved" "$(T)/$l/task-01.json" ".status" "in_progress"
+assert_json_eq "note preserved" "$(T)/$l/task-01.json" ".note" "working"
+# Arrays are replaced
 assert_json_eq "files replaced" "$(T)/$l/task-01.json" ".context.files | length" "1"
 assert_json_eq "new file" "$(T)/$l/task-01.json" ".context.files[0]" "new.ts"
 assert_json_eq "ac replaced" "$(T)/$l/task-01.json" ".acceptance_criteria | length" "1"
 assert_json_eq "new ac" "$(T)/$l/task-01.json" ".acceptance_criteria[0]" "New AC"
+teardown
+
+echo "-- update nonexistent task"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+out=$(bash "$S" update-task "$l" task-99 --description "x" 2>&1 || true)
+assert_contains "error message" "not found" "$out"
 teardown
 
 echo ""
@@ -448,6 +496,7 @@ assert_contains "shows commands" "Commands:" "$out"
 assert_contains "shows create-list" "create-list" "$out"
 assert_contains "shows add-task" "add-task" "$out"
 assert_contains "shows next" "next" "$out"
+assert_contains "shows update-status" "update-status" "$out"
 assert_contains "shows update-task" "update-task" "$out"
 teardown
 

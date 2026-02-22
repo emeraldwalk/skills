@@ -23,7 +23,7 @@ This skill enables agents to manage tasks using the bundled bash script `task_tr
   ```
 - **Add a task:**
   ```bash
-  bash scripts/task_tracking.sh add-task <list-name> "<description>" [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"]
+  bash scripts/task_tracking.sh add-task <list-name> "<description>" [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"] [--depends-on <task-id>]...
   ```
 - **Claim or get next task:**
   ```bash
@@ -31,21 +31,88 @@ This skill enables agents to manage tasks using the bundled bash script `task_tr
   ```
 - **Update task status:**
   ```bash
-  bash scripts/task_tracking.sh update-task <list-name> <task-id> <status> [--note "<note>"] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"]
+  bash scripts/task_tracking.sh update-status <list-name> <task-id> <status> "<note>"
+  ```
+- **Update task metadata:**
+  ```bash
+  bash scripts/task_tracking.sh update-task <list-name> <task-id> [--description "<text>"] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"] [--depends-on <task-id>]...
+  ```
+- **Add a dependency:**
+  ```bash
+  bash scripts/task_tracking.sh add-dependency <list-name> <task-id> <depends-on-task-id>
+  ```
+- **Remove a dependency:**
+  ```bash
+  bash scripts/task_tracking.sh remove-dependency <list-name> <task-id> <depends-on-task-id>
+  ```
+- **List all tasks in a list:**
+  ```bash
+  bash scripts/task_tracking.sh list-tasks <list-name> [--format summary|full|json]
+  ```
+- **Query/filter tasks:**
+  ```bash
+  bash scripts/task_tracking.sh query <list-name> [--status <status>] [--search <term>] [--depends-on <task-id>] [--blocked] [--claimed-by <agent-id>] [--limit <n>]
   ```
 
 ## Script Reference
 
 See `task_tracking.sh` for full CLI and API details. The script manages task lists and individual tasks in the `.tasks` directory of the current working directory. All operations are performed via the CLI interface.
 
-- Task statuses: `todo`, `completed`, `failed`, etc.
+- Task statuses: `todo`, `in_progress`, `completed`, `failed`, etc.
+- **`update-status`** changes status and writes a log entry. Both `<status>` and `<note>` are positional and always required.
+- **`update-task`** edits metadata only — description, context, acceptance criteria, verification, dependencies. It never changes status or writes a log entry. Use it to fix typos, add context, or clarify scope at any time.
 - Each task has a `context` object with `files`, `docs`, and `skills` arrays (via repeatable `--file`, `--doc`, `--skill` flags). All are optional and default to empty arrays.
 - Tasks may include `acceptance_criteria` (list of strings, via repeatable `--ac`) and a `verification` object (via `--verify-command` or `--verify-instruction`). All are optional.
 - `--verify-command` stores `{"type":"command","value":"..."}` — a shell command the agent can execute.
 - `--verify-instruction` stores `{"type":"instruction","value":"..."}` — a free-text instruction for manual verification.
 - Only one of `--verify-command` or `--verify-instruction` may be specified per task.
-- Status updates (except `completed`) require a `--note`.
-- The `update-task` command supports all the same metadata flags as `add-task` (`--file`, `--doc`, `--skill`, `--ac`, `--verify-command`, `--verify-instruction`), allowing you to modify task metadata when updating status.
+- Metadata arrays (`--file`, `--doc`, `--skill`, `--ac`) are **replaced**, not appended, when passed to `update-task`.
+
+### Listing and Querying Tasks
+
+- **`list-tasks <list> [--format summary|full|json]`** — Lists all tasks in a list.
+  - `summary` (default): returns `[{id, description, status}]` from the index — fast, no file reads
+  - `full`: returns full task objects in order, reading each per-task file
+  - `json`: returns the raw `_task-list.json` index
+
+- **`query <list> [options]`** — Filters tasks matching ALL provided criteria. Returns `[{id, description, status, claimed_by, depends_on}]`.
+  - `--status <status>` — match exact status (`todo`, `in_progress`, `completed`, `failed`)
+  - `--search <term>` — case-insensitive substring match in description, acceptance criteria, or notes
+  - `--depends-on <task-id>` — tasks that list the given ID in their `depends_on`
+  - `--blocked` — non-completed tasks with at least one non-completed dependency
+  - `--claimed-by <agent-id>` — tasks claimed by the specified agent
+  - `--limit <n>` — cap results at N (default: 0 = unlimited)
+
+  Examples:
+  ```bash
+  # All todo tasks
+  bash scripts/task_tracking.sh query my-list --status todo
+
+  # Search for auth-related tasks
+  bash scripts/task_tracking.sh query my-list --search "auth"
+
+  # Tasks blocked by task-01 being incomplete
+  bash scripts/task_tracking.sh query my-list --depends-on task-01
+
+  # All blocked tasks
+  bash scripts/task_tracking.sh query my-list --blocked
+
+  # Tasks claimed by a specific agent
+  bash scripts/task_tracking.sh query my-list --claimed-by agent-123
+
+  # Combine filters: in-progress tasks claimed by agent-123
+  bash scripts/task_tracking.sh query my-list --status in_progress --claimed-by agent-123
+  ```
+
+## Dependency Tracking
+
+Tasks can declare dependencies on other tasks via `depends_on` (a list of task IDs).
+
+- **`next --claim`** rejects a task if any of its `depends_on` tasks are not `completed`. Complete blocking tasks first.
+- **`update-status ... completed`** prints a warning listing any pending tasks that depend on the one being completed, so you know what is now unblocked.
+- Use `--depends-on <task-id>` (repeatable) with `add-task` or `update-task` to set/replace the full dependency list.
+- Use `add-dependency` / `remove-dependency` for surgical edits to an existing task's dependencies.
+- Circular dependencies are not auto-detected; avoid them when designing task lists.
 
 ## Error Handling
 
