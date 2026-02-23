@@ -163,12 +163,13 @@ cmd_add_task() {
 cmd_next() {
   local list_name="$1"
   shift
-  local skip_failed=false claim=""
+  local skip_failed=false claim="" force=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --skip-failed) skip_failed=true; shift ;;
       --claim) claim="$2"; shift 2 ;;
+      --force) force=true; shift ;;
       *) echo "Unknown option: $1"; return 1 ;;
     esac
   done
@@ -242,7 +243,7 @@ cmd_next() {
     local claimed_by
     claimed_by=$(echo "$task" | jq -r '.claimed_by // empty')
 
-    if [[ -n "$claimed_by" ]]; then
+    if [[ -n "$claimed_by" && "$force" != "true" ]]; then
       echo "Error: Task ${task_id} is already claimed by ${claimed_by}."
       return 1
     fi
@@ -751,7 +752,7 @@ Commands:
   list-lists
   list-tasks <list> [--format {summary|full|json}]
   add-task <list> <desc> [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>] [--depends-on <task-id>]...
-  next <list> [--skip-failed] [--claim <AGENT_ID>]
+  next <list> [--skip-failed] [--claim <AGENT_ID>] [--force]
   update-status <list> <task-id> <status> <note>
   update-task <list> <task-id> [--description <text>] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>] [--depends-on <task-id>]...
   add-dependency <list> <task-id> <depends-on-task-id>

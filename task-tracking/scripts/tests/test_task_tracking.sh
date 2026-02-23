@@ -287,6 +287,17 @@ out=$(bash "$S" next "$l" --claim agent-2 2>&1 || true)
 assert_contains "already claimed error" "already claimed" "$out"
 teardown
 
+echo "-- force claim overwrites existing claim"
+setup; l=$(L)
+bash "$S" create-list "$l" >/dev/null
+bash "$S" add-task "$l" "Claimable" >/dev/null
+bash "$S" next "$l" --claim agent-1 >/dev/null
+out=$(bash "$S" next "$l" --claim agent-2 --force)
+assert_contains "returns task" '"id": "task-01"' "$out"
+assert_contains "new claimed_by set" '"claimed_by": "agent-2"' "$out"
+assert_json_eq "force claim persisted" "$(T)/$l/task-01.json" ".claimed_by" "agent-2"
+teardown
+
 echo "-- next on nonexistent list"
 setup; l=$(L)
 out=$(bash "$S" next "nonexistent-$l" 2>&1 || true)
