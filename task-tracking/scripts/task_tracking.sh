@@ -19,7 +19,20 @@ parse_add_task_flags() {
 #!/usr/bin/env bash
 set -euo pipefail
 
-TASKS_DIR="${TASKS_DIR:-${PWD}/.tasks}"
+# Find existing .tasks directory by walking up, or fallback to PWD
+find_tasks_dir() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -d "$dir/.tasks" ]]; then
+      echo "$dir/.tasks"
+      return 0
+    fi
+    dir=$(dirname "$dir")
+  done
+  echo "${PWD}/.tasks"
+}
+
+TASKS_DIR="${TASKS_DIR:-$(find_tasks_dir)}"
 
 # Ensure .tasks directory exists
 ensure_dir() {

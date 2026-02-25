@@ -3,60 +3,79 @@ name: task-tracking
 description: Task management and tracking for agents. Use this skill whenever you need to create, update, claim, or retrieve tasks for agent workflows. This skill is triggered for any request involving task lists, task assignment, or status updates.
 ---
 
-# Task Tracking Skill
+This skill enables agents to manage tasks using the bundled bash script `task_tracking.sh`, located in the skill's `scripts` folder.
 
-This skill enables agents to manage tasks using the bundled bash script `task_tracking.sh`, located in the skill's `scripts` folder. Requires `jq` to be installed.
+## Prerequisites
 
-> **Note:** The script is bundled with the skill. All references in this documentation use the script name only; agents should resolve the path to the script within the skill's `scripts` directory as appropriate for their environment.
+Requires `jq` for JSON processing. Install via your system package manager if not already available.
 
-> **Discovery:** Agents should use `bash scripts/task_tracking.sh --help` to discover all available commands and options. Do not read the script source directly; rely on the CLI help output for authoritative usage and argument details.
+## How It Works
+
+The script stores task data in a `.tasks` directory. It automatically finds the correct location by:
+
+1. Walking up from your current directory to find an existing `.tasks` directory
+2. If not found, creates `.tasks` in your current directory
+
+**This means:**
+
+- ✅ Works from any subdirectory once `.tasks` exists
+- ✅ No need to remember or navigate to workspace root
+- ⚠️ Initial setup: be in your desired workspace root when creating the first task list
+
+> **Discovery:** Run `bash <path-to-skill>/scripts/task_tracking.sh --help` to see all available commands.
 
 ## Quick Start
 
+**Note:** In all examples below, replace `<path-to-skill>` with the absolute path to where this skill is loaded from (the directory containing this SKILL.md file).
+
 - **Create a task list:**
   ```bash
-  bash scripts/task_tracking.sh create-list <list-name>
+  bash <path-to-skill>/scripts/task_tracking.sh create-list <list-name>
   ```
 - **List available task lists:**
   ```bash
-  bash scripts/task_tracking.sh list-lists
+  bash <path-to-skill>/scripts/task_tracking.sh list-lists
   ```
 - **Add a task:**
   ```bash
-  bash scripts/task_tracking.sh add-task <list-name> "<description>" [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"] [--depends-on <task-id>]...
+  bash <path-to-skill>/scripts/task_tracking.sh add-task <list-name> "<description>" [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"] [--depends-on <task-id>]...
   ```
 - **Claim or get next task:**
   ```bash
-  bash scripts/task_tracking.sh next <list-name> [--skip-failed] [--claim <AGENT_ID>]
+  bash <path-to-skill>/scripts/task_tracking.sh next <list-name> [--skip-failed] [--claim <AGENT_ID>]
   ```
 - **Update task status:**
   ```bash
-  bash scripts/task_tracking.sh update-status <list-name> <task-id> <status> "<note>"
+  bash <path-to-skill>/scripts/task_tracking.sh update-status <list-name> <task-id> <status> "<note>"
   ```
 - **Update task metadata:**
   ```bash
-  bash scripts/task_tracking.sh update-task <list-name> <task-id> [--description "<text>"] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"] [--depends-on <task-id>]...
+  bash <path-to-skill>/scripts/task_tracking.sh update-task <list-name> <task-id> [--description "<text>"] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac "<criterion>"]... [--verify-command "<cmd>"] [--verify-instruction "<text>"] [--depends-on <task-id>]...
   ```
 - **Add a dependency:**
   ```bash
-  bash scripts/task_tracking.sh add-dependency <list-name> <task-id> <depends-on-task-id>
+  bash <path-to-skill>/scripts/task_tracking.sh add-dependency <list-name> <task-id> <depends-on-task-id>
   ```
 - **Remove a dependency:**
   ```bash
-  bash scripts/task_tracking.sh remove-dependency <list-name> <task-id> <depends-on-task-id>
+  bash <path-to-skill>/scripts/task_tracking.sh remove-dependency <list-name> <task-id> <depends-on-task-id>
   ```
 - **List all tasks in a list:**
   ```bash
-  bash scripts/task_tracking.sh list-tasks <list-name> [--format summary|full|json]
+  bash <path-to-skill>/scripts/task_tracking.sh list-tasks <list-name> [--format summary|full|json]
   ```
 - **Query/filter tasks:**
   ```bash
-  bash scripts/task_tracking.sh query <list-name> [--status <status>] [--search <term>] [--depends-on <task-id>] [--blocked] [--claimed-by <agent-id>] [--limit <n>]
+  bash <path-to-skill>/scripts/task_tracking.sh query <list-name> [--status <status>] [--search <term>] [--depends-on <task-id>] [--blocked] [--claimed-by <agent-id>] [--limit <n>]
   ```
 
 ## Script Reference
 
-See `task_tracking.sh` for full CLI and API details. The script manages task lists and individual tasks in the `.tasks` directory of the current working directory. All operations are performed via the CLI interface.
+Run `bash <path-to-skill>/scripts/task_tracking.sh --help` for complete CLI documentation.
+
+**Key concepts:**
+
+- **The script automatically finds or creates the `.tasks` directory** by walking up from your current location. All operations are performed via the CLI interface.
 
 - Task statuses: `todo`, `in_progress`, `completed`, `failed`, etc.
 - **`update-status`** changes status and writes a log entry. Both `<status>` and `<note>` are positional and always required.
@@ -84,24 +103,25 @@ See `task_tracking.sh` for full CLI and API details. The script manages task lis
   - `--limit <n>` — cap results at N (default: 0 = unlimited)
 
   Examples:
+
   ```bash
   # All todo tasks
-  bash scripts/task_tracking.sh query my-list --status todo
+  bash <path-to-skill>/scripts/task_tracking.sh query my-list --status todo
 
   # Search for auth-related tasks
-  bash scripts/task_tracking.sh query my-list --search "auth"
+  bash <path-to-skill>/scripts/task_tracking.sh query my-list --search "auth"
 
   # Tasks blocked by task-01 being incomplete
-  bash scripts/task_tracking.sh query my-list --depends-on task-01
+  bash <path-to-skill>/scripts/task_tracking.sh query my-list --depends-on task-01
 
   # All blocked tasks
-  bash scripts/task_tracking.sh query my-list --blocked
+  bash <path-to-skill>/scripts/task_tracking.sh query my-list --blocked
 
   # Tasks claimed by a specific agent
-  bash scripts/task_tracking.sh query my-list --claimed-by agent-123
+  bash <path-to-skill>/scripts/task_tracking.sh query my-list --claimed-by agent-123
 
   # Combine filters: in-progress tasks claimed by agent-123
-  bash scripts/task_tracking.sh query my-list --status in_progress --claimed-by agent-123
+  bash <path-to-skill>/scripts/task_tracking.sh query my-list --status in_progress --claimed-by agent-123
   ```
 
 ## Dependency Tracking
@@ -117,6 +137,7 @@ Tasks can declare dependencies on other tasks via `depends_on` (a list of task I
 ## Error Handling
 
 **CRITICAL:** If the task tracking script returns an error or fails to execute:
+
 1. **IMMEDIATELY notify the user** about the error and include the full error message
 2. **DO NOT attempt to modify task files manually** (e.g., editing `.tasks/` directory JSON files directly)
 3. **DO NOT work around the script** by using jq, cat, or other tools to manipulate task data
@@ -124,18 +145,33 @@ Tasks can declare dependencies on other tasks via `depends_on` (a list of task I
 
 The task tracking system is designed to maintain data integrity through the script interface only. Manual modifications can corrupt the task list, status logs, or task metadata.
 
+**Data location:** The script automatically finds the `.tasks` directory by walking up from your current location, or creates it in the current directory if not found.
+
 ## Best Practices
 
-- Always provide meaningful context for each task.
-- Use agent IDs to claim tasks for specific agents.
-- Log progress and errors using the `update-task` command with notes.
-- If the script fails, stop and notify the user - do not attempt manual workarounds.
+**Initial Setup**
+
+- Create your first task list from your intended workspace root directory
+- The `.tasks` directory will be created there
+- Subsequent commands work from any subdirectory
+
+**Task management**
+
+- Always provide meaningful context for each task
+- Use agent IDs to claim tasks for specific agents
+- Log progress and errors using the `update-task` command with notes
+- If the script fails, stop and notify the user - do not attempt manual workarounds
+
+**After completing a task**
+
+- Provide a git commit message summarizing the work done for the user to use when committing changes
 
 ## Writing Self-Sufficient Tasks
 
 When creating a task, populate enough context for a zero-context agent to succeed without follow-up questions:
 
 **Description**: State the current state and desired outcome, not just the task name.
+
 - Poor: `"Fix free book button"`
 - Good: `"Free products show 'Add to Cart' — change button label to 'Get Free' for products with price = 0"`
 
