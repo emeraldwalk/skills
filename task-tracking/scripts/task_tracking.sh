@@ -333,7 +333,7 @@ cmd_update_status() {
       fi
     done
     if [[ ${#dependents[@]} -gt 0 ]]; then
-      echo "Warning: Completing ${task_id} will unblock dependent tasks: ${dependents[*]}"
+      echo "Note: Completing ${task_id} will unblock dependent tasks: ${dependents[*]}"
     fi
   fi
 
@@ -730,6 +730,34 @@ cmd_add_dependency() {
   echo "Added dependency: ${task_id} depends on ${dep_id}."
 }
 
+cmd_commit_message() {
+  local list_name="$1" task_id="$2"
+
+  local list_dir
+  list_dir=$(get_list_dir "$list_name")
+  local task_file="${list_dir}/${task_id}.json"
+
+  if [[ ! -f "$(get_list_path "$list_name")" ]]; then
+    echo "Error: List '${list_name}' not found."
+    return 1
+  fi
+  if [[ ! -f "$task_file" ]]; then
+    echo "Error: Task '${task_id}' not found."
+    return 1
+  fi
+
+  local description note
+  description=$(jq -r '.description' "$task_file")
+  note=$(jq -r '.note // ""' "$task_file")
+
+  local subject="${list_name}/${task_id}: ${description}"
+  if [[ -n "$note" ]]; then
+    printf '%s\n\n%s\n' "$subject" "$note"
+  else
+    printf '%s\n' "$subject"
+  fi
+}
+
 cmd_remove_dependency() {
   local list_name="$1" task_id="$2" dep_id="$3"
 
@@ -770,11 +798,12 @@ Commands:
   update-task <list> <task-id> [--description <text>] [--file <path>]... [--doc <path>]... [--skill <name>]... [--ac <criterion>]... [--verify-command <cmd>] [--verify-instruction <text>] [--depends-on <task-id>]...
   add-dependency <list> <task-id> <depends-on-task-id>
   remove-dependency <list> <task-id> <depends-on-task-id>
+  commit-message <list> <task-id>
   query <list> [--status <status>] [--search <term>] [--depends-on <task-id>] [--blocked] [--claimed-by <agent-id>] [--limit <n>]
 
 Dependency notes:
   - 'next --claim' rejects tasks with unmet (non-completed) dependencies
-  - 'update-status ... completed' warns if other pending tasks depend on this task
+  - 'update-status ... completed' notes if other pending tasks depend on this task
 
 Query notes:
   - Filters are AND-combined (all must match)
@@ -800,6 +829,7 @@ case "$command" in
   update-task)        cmd_update_task "$@" ;;
   add-dependency)     cmd_add_dependency "$@" ;;
   remove-dependency)  cmd_remove_dependency "$@" ;;
+  commit-message)     cmd_commit_message "$@" ;;
   query)              cmd_query "$@" ;;
   --help|-h|"")       usage ;;
   *)                  echo "Unknown command: $command"; usage; exit 1 ;;
