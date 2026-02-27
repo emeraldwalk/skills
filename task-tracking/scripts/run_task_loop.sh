@@ -223,7 +223,8 @@ run_agent() {
 
   case "$CLI" in
     claude)
-      echo "$prompt" | claude --print --dangerously-skip-permissions \
+      # Use --verbose with stream-json for detailed real-time output
+      echo "$prompt" | claude --print --verbose --output-format=stream-json --dangerously-skip-permissions \
         > "$log_file" 2>&1
       ;;
     copilot)
