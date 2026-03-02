@@ -6,7 +6,7 @@
 #
 # Arguments:
 #   list-id    Task list name (e.g. "my-sprint")
-#   max-tasks  Maximum number of tasks to execute (integer)
+#   max-tasks  Maximum number of tasks to execute (integer), or "all" to run until no tasks remain
 #   cli        Agent CLI to use: "claude", "copilot", or "mock" (for testing)
 #
 # Environment:
@@ -35,7 +35,7 @@ Usage: run_task_loop.sh <list-id> <max-tasks> <cli>
 
 Arguments:
   list-id    Task list name
-  max-tasks  Max number of tasks to execute (integer >= 1)
+  max-tasks  Max number of tasks to execute (integer >= 1), or "all" to run until no tasks remain
   cli        Agent CLI: "claude", "copilot", or "mock"
 
 Environment:
@@ -53,8 +53,12 @@ LIST_ID="$1"
 MAX_TASKS="$2"
 CLI="$3"
 
-if ! [[ "$MAX_TASKS" =~ ^[1-9][0-9]*$ ]]; then
-  echo "Error: max-tasks must be a positive integer, got: ${MAX_TASKS}"
+if [[ "$MAX_TASKS" == "all" ]]; then
+  RUN_ALL=1
+elif [[ "$MAX_TASKS" =~ ^[1-9][0-9]*$ ]]; then
+  RUN_ALL=0
+else
+  echo "Error: max-tasks must be a positive integer or 'all', got: ${MAX_TASKS}"
   exit 1
 fi
 
@@ -249,15 +253,21 @@ if [[ -z "${_LOGGING:-}" ]]; then
   export _LOGGING=1
   exec > >(tee -a "$LOOP_LOG") 2> >(tee -a "$LOOP_LOG" >&2)
 fi
-log "Starting task run: list=${LIST_ID}, max=${MAX_TASKS}, cli=${CLI}"
+if [[ "$RUN_ALL" -eq 1 ]]; then
+  pending_count=$(bash "$TASK_TRACKING" count "$LIST_ID" --exclude-status completed --exclude-status skipped 2>/dev/null || echo "?")
+  TOTAL_TASKS="$pending_count"
+else
+  TOTAL_TASKS="$MAX_TASKS"
+fi
+log "Starting task run: list=${LIST_ID}, max=${TOTAL_TASKS}, cli=${CLI}"
 log "Project root: ${PROJECT_ROOT}"
 log "Tasks dir: ${TASKS_DIR}"
 
 completed_count=0
 
-while [[ "$completed_count" -lt "$MAX_TASKS" ]]; do
+while [[ "$RUN_ALL" -eq 1 || "$completed_count" -lt "$MAX_TASKS" ]]; do
   log "---"
-  log "Iteration $((completed_count + 1)) of ${MAX_TASKS}"
+  log "Iteration $((completed_count + 1)) of ${TOTAL_TASKS}"
 
   # Claim next available task
   task_json=$(bash "$TASK_TRACKING" next "$LIST_ID" --claim "$claim_id" 2>&1) || {
@@ -324,7 +334,7 @@ while [[ "$completed_count" -lt "$MAX_TASKS" ]]; do
   fi
 
   completed_count=$((completed_count + 1))
-  log "Task ${task_id} complete. (${completed_count}/${MAX_TASKS})"
+  log "Task ${task_id} complete. (${completed_count}/${TOTAL_TASKS})"
 done
 
-log "Reached max task limit (${MAX_TASKS}). Done."
+log "Reached max task limit (${TOTAL_TASKS}). Done. (${completed_count} tasks completed)"

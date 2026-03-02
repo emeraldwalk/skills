@@ -68,6 +68,10 @@ The script stores task data in a `.tasks` directory. It automatically finds the 
   ```bash
   bash <path-to-skill>/scripts/task_tracking.sh query <list-name> [--status <status>] [--search <term>] [--depends-on <task-id>] [--blocked] [--claimed-by <agent-id>] [--limit <n>]
   ```
+- **Count tasks:**
+  ```bash
+  bash <path-to-skill>/scripts/task_tracking.sh count <list-name> [--status <status>] [--exclude-status <status>]...
+  ```
 
 ## Script Reference
 
@@ -77,7 +81,9 @@ Run `bash <path-to-skill>/scripts/task_tracking.sh --help` for complete CLI docu
 
 - **The script automatically finds or creates the `.tasks` directory** by walking up from your current location. All operations are performed via the CLI interface.
 
-- Task statuses: `todo`, `in_progress`, `completed`, `failed`, etc.
+- Task statuses: `todo`, `in_progress`, `completed`, `failed`, `skipped`
+  - `completed` and `skipped` are **terminal** — `next` will not pick them up, and they satisfy dependency requirements for downstream tasks
+  - `skipped` means "won't implement" — use `update-status <list> <id> skipped "<reason>"` to mark a task as deliberately bypassed
 - **`update-status`** changes status and writes a log entry. Both `<status>` and `<note>` are positional and always required.
 - **`update-task`** edits metadata only — description, context, acceptance criteria, verification, dependencies. It never changes status or writes a log entry. Use it to fix typos, add context, or clarify scope at any time.
 - Each task has a `context` object with `files`, `docs`, and `skills` arrays (via repeatable `--file`, `--doc`, `--skill` flags). All are optional and default to empty arrays.
@@ -87,12 +93,14 @@ Run `bash <path-to-skill>/scripts/task_tracking.sh --help` for complete CLI docu
 - Only one of `--verify-command` or `--verify-instruction` may be specified per task.
 - Metadata arrays (`--file`, `--doc`, `--skill`, `--ac`) are **replaced**, not appended, when passed to `update-task`.
 
-### Listing and Querying Tasks
+### Listing, Querying, and Counting Tasks
 
 - **`list-tasks <list> [--format summary|full|json]`** — Lists all tasks in a list.
   - `summary` (default): returns `[{id, description, status}]` from the index — fast, no file reads
   - `full`: returns full task objects in order, reading each per-task file
   - `json`: returns the raw `_task-list.json` index
+
+- **`count <list> [options]`** — Returns a single integer: the number of tasks matching the filters. Reads only the index file (fast). Supports `--status <status>` and `--exclude-status <status>` (repeatable; excludes each listed status).
 
 - **`query <list> [options]`** — Filters tasks matching ALL provided criteria. Returns `[{id, description, status, claimed_by, depends_on}]`.
   - `--status <status>` — match exact status (`todo`, `in_progress`, `completed`, `failed`)

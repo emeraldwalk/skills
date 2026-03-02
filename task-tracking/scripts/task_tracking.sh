@@ -199,7 +199,7 @@ cmd_next() {
 
   # Iterate through candidate tasks in order, skipping blocked ones
   local candidate_ids
-  candidate_ids=$(jq -r '.tasks[] | select(.status != "completed") | .id' "$path")
+  candidate_ids=$(jq -r '.tasks[] | select(.status != "completed" and .status != "skipped") | .id' "$path")
 
   local task_id="" task=""
 
@@ -230,7 +230,7 @@ cmd_next() {
       fi
       local dep_status
       dep_status=$(jq -r '.status' "$dep_file")
-      if [[ "$dep_status" != "completed" ]]; then
+      if [[ "$dep_status" != "completed" && "$dep_status" != "skipped" ]]; then
         blocked=true
         break
       fi
@@ -314,8 +314,8 @@ cmd_update_status() {
     return 1
   fi
 
-  # Warn if completing a task that other tasks depend on
-  if [[ "$status" == "completed" ]]; then
+  # Warn if completing/skipping a task that other tasks depend on
+  if [[ "$status" == "completed" || "$status" == "skipped" ]]; then
     local dependents=()
     for tf in "${list_dir}"/task-*.json; do
       [[ -f "$tf" ]] || continue
@@ -324,7 +324,7 @@ cmd_update_status() {
       [[ "$tid" == "$task_id" ]] && continue
       local dep_status
       dep_status=$(jq -r '.status' "$tf")
-      if [[ "$dep_status" != "completed" ]]; then
+      if [[ "$dep_status" != "completed" && "$dep_status" != "skipped" ]]; then
         local has_dep
         has_dep=$(jq --arg dep "$task_id" '.depends_on // [] | map(select(. == $dep)) | length' "$tf")
         if [[ "$has_dep" -gt 0 ]]; then
@@ -621,12 +621,12 @@ cmd_query() {
       [[ "$has_dep" -gt 0 ]] || continue
     fi
 
-    # --blocked filter: tasks with at least one non-completed dependency
+    # --blocked filter: tasks with at least one non-terminal dependency
     if [[ "$show_blocked" == "true" ]]; then
       local task_status
       task_status=$(echo "$task" | jq -r '.status')
-      # Only non-completed tasks can be meaningfully "blocked"
-      [[ "$task_status" != "completed" ]] || continue
+      # Only non-terminal tasks can be meaningfully "blocked"
+      [[ "$task_status" != "completed" && "$task_status" != "skipped" ]] || continue
 
       local deps
       deps=$(echo "$task" | jq -r '.depends_on // [] | .[]')
@@ -640,7 +640,7 @@ cmd_query() {
         fi
         local dep_status
         dep_status=$(jq -r '.status' "$dep_file")
-        if [[ "$dep_status" != "completed" ]]; then
+        if [[ "$dep_status" != "completed" && "$dep_status" != "skipped" ]]; then
           is_blocked=true
           break
         fi
@@ -685,6 +685,40 @@ cmd_query() {
   done
   json+="]"
   echo "$json" | jq '.'
+}
+
+cmd_count() {
+  local list_name="$1"
+  shift
+
+  local filter_status="" exclude_statuses=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --status)         filter_status="$2"; shift 2 ;;
+      --exclude-status) exclude_statuses+=("$2"); shift 2 ;;
+      *) echo "Unknown option: $1"; return 1 ;;
+    esac
+  done
+
+  local path
+  path=$(get_list_path "$list_name")
+
+  if [[ ! -f "$path" ]]; then
+    echo "Error: List '${list_name}' not found."
+    return 1
+  fi
+
+  local exclude_json
+  exclude_json=$(printf '%s\n' "${exclude_statuses[@]+"${exclude_statuses[@]}"}" | jq -Rsc 'split("\n") | map(select(. != ""))')
+
+  jq \
+    --arg fs "$filter_status" \
+    --argjson xs "$exclude_json" \
+    '[.tasks[]
+      | select($fs == "" or .status == $fs)
+      | select(.status as $s | $xs | map(. == $s) | any | not)
+    ] | length' "$path"
 }
 
 cmd_add_dependency() {
@@ -800,6 +834,7 @@ Commands:
   remove-dependency <list> <task-id> <depends-on-task-id>
   commit-message <list> <task-id>
   query <list> [--status <status>] [--search <term>] [--depends-on <task-id>] [--blocked] [--claimed-by <agent-id>] [--limit <n>]
+  count <list> [--status <status>] [--exclude-status <status>]
 
 Dependency notes:
   - 'next --claim' rejects tasks with unmet (non-completed) dependencies
@@ -831,6 +866,7 @@ case "$command" in
   remove-dependency)  cmd_remove_dependency "$@" ;;
   commit-message)     cmd_commit_message "$@" ;;
   query)              cmd_query "$@" ;;
+  count)              cmd_count "$@" ;;
   --help|-h|"")       usage ;;
   *)                  echo "Unknown command: $command"; usage; exit 1 ;;
 esac
