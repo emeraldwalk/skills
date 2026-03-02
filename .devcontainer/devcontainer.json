@@ -1,0 +1,59 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/debian
+{
+  "name": "Debian",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "version": "latest",
+      "pnpmVersion": "latest",
+      "nvmVersion": "latest"
+    }
+  },
+  "mounts": [
+    // Go module and build cache
+    "source=todo-app-go-cache,target=/home/vscode/go/pkg,type=volume",
+    "source=todo-app-go-build-cache,target=/root/.cache/go-build,type=volume",
+
+    // Named volume: isolated settings per container
+    "source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume",
+
+    // Bind-mount auth token file so login persists across rebuilds
+    "source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind,consistency=cached"
+  ],
+
+  "postCreateCommand": ".devcontainer/setup.sh",
+
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+  },
+
+  // Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        // "Yolo" permissions for Claude
+        "claudeCode.allowDangerouslySkipPermissions": true,
+        "claudeCode.initialPermissionMode": "bypassPermissions",
+
+        // Other VS Code preferences
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "workbench.colorCustomizations": {
+          "statusBar.background": "#5a021e",
+          "titleBar.activeBackground": "#5a021e"
+        }
+      }
+    }
+  }
+}
