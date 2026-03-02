@@ -1,0 +1,30 @@
+{
+  "id": "task-03",
+  "description": "Add a --image-scale <factor> option (float, default 0.25) and --image-max-width / --image-max-height options (integers, default 1200 and 900) to give users control over the wireframe image dimensions added in task-02. --image-scale sets a direct scale factor relative to the original viewport size (e.g., 0.25 = 25% of original). --image-max-width and --image-max-height cap the output dimensions. If both --image-scale and the max options are set, apply scale first then clamp to the max. Also update the --help text to document all three new options alongside --save-image. Update SKILL.md in /workspaces/skills/layout-inspecting/ to document the --save-image, --image-scale, --image-max-width, --image-max-height, and --tui flags with examples.",
+  "status": "todo",
+  "created": "2026-03-02T14:40:58",
+  "updated": "2026-03-02T14:40:58",
+  "note": null,
+  "context": {
+    "files": [
+      "/workspaces/skills/layout-inspecting/scripts/inspect_layout.js",
+      "/workspaces/skills/layout-inspecting/SKILL.md"
+    ],
+    "docs": [],
+    "skills": []
+  },
+  "acceptance_criteria": [
+    "--image-scale 0.5 produces an image at 50% of the original viewport dimensions",
+    "--image-max-width and --image-max-height clamp output size if scale would exceed them",
+    "Both options are documented in --help output",
+    "SKILL.md documents --tui, --save-image, --image-scale, --image-max-width, --image-max-height with usage examples"
+  ],
+  "verification": {
+    "type": "command",
+    "value": "node /workspaces/skills/layout-inspecting/scripts/inspect_layout.js --help | grep -E 'tui|save-image|image-scale|image-max'"
+  },
+  "depends_on": [
+    "task-02"
+  ],
+  "claimed_by": null
+}

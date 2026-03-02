@@ -1,0 +1,21 @@
+{
+  "name": "layout-inspecting-tui-image",
+  "created_at": "2026-03-02T14:40:18",
+  "tasks": [
+    {
+      "id": "task-01",
+      "description": "Add a --tui flag to inspect_layout.js that launches an interactive terminal UI showing a spatial wireframe of the layout — a visual map of the page rendered in the terminal, not a JSON tree. The layout JSON already contains pixel coordinates (rect.x, rect.y, rect.width, rect.height) and colors for every node. Scale these coordinates to fit the terminal window size (use process.stdout.columns / process.stdout.rows), then draw each layout region as a labeled box at its proportional position using ANSI escape codes or a terminal canvas library. Regions that overlap should render child regions on top of parent regions (paint in tree order: root first, children after). Each box should show its label text (node.label) and ideally its background color as an ANSI 256-color or truecolor background fill. Use the 'blessed' npm library installed into the skill's own node_modules at /workspaces/skills/layout-inspecting/scripts/node_modules/ via npm install --prefix /workspaces/skills/layout-inspecting/scripts blessed. The existing self-install bootstrap (lines 38-83 of inspect_layout.js) should be extended to auto-install blessed. Press 'q' to quit. The TUI renders the already-computed layout JSON in memory — no second browser fetch. --tui is incompatible with --output (print an error if both are given).",
+      "status": "todo"
+    },
+    {
+      "id": "task-02",
+      "description": "Add a --save-image <path> flag to inspect_layout.js that renders the layout tree as a wireframe PNG. The wireframe should be a scaled-down visual diagram (not a browser screenshot) representing the layout structure as colored rectangles on a canvas. The image dimensions should be proportional to the original viewport but smaller — scale to fit within 1200x900 px by default, preserving the aspect ratio of the captured viewport. Each node in the layout JSON tree (rect, background, border) should be drawn as a filled rectangle using its background color, with an optional border stroke if the node has a border property. Overlay the node's label text in a contrasting color. Use the 'canvas' npm package (node-canvas) installed into the skill's own node_modules at /workspaces/skills/layout-inspecting/scripts/node_modules/. Extend the existing self-install bootstrap (lines 38-83 of inspect_layout.js) to auto-install 'canvas'. Draw nodes in tree order (parents first, children on top) so child regions visually overlap parents. The output file path comes from --save-image. Supported formats: .png (always), .jpg if the path ends in .jpg/.jpeg. This flag is compatible with --output and --tui: all three can coexist (compute layout once, write JSON if --output is set, save image if --save-image is set, launch TUI if --tui is set).",
+      "status": "todo"
+    },
+    {
+      "id": "task-03",
+      "description": "Add a --image-scale <factor> option (float, default 0.25) and --image-max-width / --image-max-height options (integers, default 1200 and 900) to give users control over the wireframe image dimensions added in task-02. --image-scale sets a direct scale factor relative to the original viewport size (e.g., 0.25 = 25% of original). --image-max-width and --image-max-height cap the output dimensions. If both --image-scale and the max options are set, apply scale first then clamp to the max. Also update the --help text to document all three new options alongside --save-image. Update SKILL.md in /workspaces/skills/layout-inspecting/ to document the --save-image, --image-scale, --image-max-width, --image-max-height, and --tui flags with examples.",
+      "status": "todo"
+    }
+  ]
+}

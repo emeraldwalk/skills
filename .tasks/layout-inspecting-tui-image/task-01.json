@@ -1,0 +1,32 @@
+{
+  "id": "task-01",
+  "description": "Add a --tui flag to inspect_layout.js that launches an interactive terminal UI showing a spatial wireframe of the layout — a visual map of the page rendered in the terminal, not a JSON tree. The layout JSON already contains pixel coordinates (rect.x, rect.y, rect.width, rect.height) and colors for every node. Scale these coordinates to fit the terminal window size (use process.stdout.columns / process.stdout.rows), then draw each layout region as a labeled box at its proportional position using ANSI escape codes or a terminal canvas library. Regions that overlap should render child regions on top of parent regions (paint in tree order: root first, children after). Each box should show its label text (node.label) and ideally its background color as an ANSI 256-color or truecolor background fill. Use the 'blessed' npm library installed into the skill's own node_modules at /workspaces/skills/layout-inspecting/scripts/node_modules/ via npm install --prefix /workspaces/skills/layout-inspecting/scripts blessed. The existing self-install bootstrap (lines 38-83 of inspect_layout.js) should be extended to auto-install blessed. Press 'q' to quit. The TUI renders the already-computed layout JSON in memory — no second browser fetch. --tui is incompatible with --output (print an error if both are given).",
+  "status": "todo",
+  "created": "2026-03-02T14:40:32",
+  "updated": "2026-03-02T14:44:25",
+  "note": null,
+  "context": {
+    "files": [
+      "/workspaces/skills/layout-inspecting/scripts/inspect_layout.js",
+      "/workspaces/skills/layout-inspecting/scripts/package.json",
+      "/workspaces/skills/layout-inspecting/SKILL.md"
+    ],
+    "docs": [],
+    "skills": []
+  },
+  "acceptance_criteria": [
+    "Running the script with --tui launches an interactive terminal UI instead of printing JSON",
+    "The TUI renders a spatial wireframe: each layout region appears at its proportional position in the terminal, sized proportionally to the terminal dimensions",
+    "Regions are drawn in tree order so child regions visually appear on top of parent regions",
+    "Each region displays its label text and uses an ANSI background color approximating the node's background",
+    "'q' exits the TUI cleanly",
+    "The blessed library is auto-installed to the skill's own node_modules on first use, following the existing bootstrap pattern",
+    "--tui is incompatible with --output (print an error if both are given)"
+  ],
+  "verification": {
+    "type": "instruction",
+    "value": "Run: node /workspaces/skills/layout-inspecting/scripts/inspect_layout.js https://example.com --tui. Verify the terminal shows a spatial map of the page — boxes at proportional positions with labels and colored backgrounds, not a JSON tree or text outline. Press q to exit."
+  },
+  "depends_on": [],
+  "claimed_by": null
+}
