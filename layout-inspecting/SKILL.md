@@ -34,6 +34,11 @@ node <path-to-skill>/scripts/inspect_layout.js <url> [options]
 | `--timeout <ms>` | 30000 | Navigation timeout |
 | `--output <file>` | stdout | Write JSON to a file |
 | `--wait-for <sel>` | — | Wait for a CSS selector before inspecting |
+| `--tui` | false | Launch interactive terminal UI showing a spatial wireframe |
+| `--save-image <path>` | — | Save wireframe PNG/JPG image of the layout (e.g. `out.png`) |
+| `--image-scale <factor>` | 0.25 | Scale factor relative to viewport size (e.g. 0.5 = 50%) |
+| `--image-max-width <px>` | 1200 | Max image width; clamps output after scale is applied |
+| `--image-max-height <px>` | 900 | Max image height; clamps output after scale is applied |
 
 **Examples:**
 
@@ -49,6 +54,21 @@ node <path-to-skill>/scripts/inspect_layout.js http://localhost:3000 --wait-for 
 
 # Narrow viewport (mobile simulation)
 node <path-to-skill>/scripts/inspect_layout.js https://example.com --width 375 --height 812
+
+# Launch interactive terminal wireframe UI (press q to quit)
+node <path-to-skill>/scripts/inspect_layout.js https://example.com --tui
+
+# Save a wireframe PNG image of the layout (default: 25% of viewport size)
+node <path-to-skill>/scripts/inspect_layout.js https://example.com --save-image layout.png
+
+# Save at 50% of viewport size
+node <path-to-skill>/scripts/inspect_layout.js https://example.com --save-image layout.png --image-scale 0.5
+
+# Save at 100% but capped at 800x600
+node <path-to-skill>/scripts/inspect_layout.js https://example.com --save-image layout.png --image-scale 1.0 --image-max-width 800 --image-max-height 600
+
+# Combine: write JSON, save image, and launch TUI in one run
+node <path-to-skill>/scripts/inspect_layout.js https://example.com --output layout.json --save-image layout.png --tui
 ```
 
 ## Output Format

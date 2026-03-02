@@ -15,7 +15,7 @@
     {
       "id": "task-03",
       "description": "Add a --image-scale <factor> option (float, default 0.25) and --image-max-width / --image-max-height options (integers, default 1200 and 900) to give users control over the wireframe image dimensions added in task-02. --image-scale sets a direct scale factor relative to the original viewport size (e.g., 0.25 = 25% of original). --image-max-width and --image-max-height cap the output dimensions. If both --image-scale and the max options are set, apply scale first then clamp to the max. Also update the --help text to document all three new options alongside --save-image. Update SKILL.md in /workspaces/skills/layout-inspecting/ to document the --save-image, --image-scale, --image-max-width, --image-max-height, and --tui flags with examples.",
-      "status": "todo"
+      "status": "completed"
     }
   ]
 }

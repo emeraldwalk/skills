@@ -129,6 +129,9 @@ function parseArgs(argv) {
     waitFor: null,
     tui: false,
     saveImage: null,
+    imageScale: 0.25,
+    imageMaxWidth: 1200,
+    imageMaxHeight: 900,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -156,6 +159,12 @@ function parseArgs(argv) {
       opts.tui = true;
     } else if (a === '--save-image') {
       opts.saveImage = args[++i];
+    } else if (a === '--image-scale') {
+      opts.imageScale = parseFloat(args[++i]);
+    } else if (a === '--image-max-width') {
+      opts.imageMaxWidth = parseInt(args[++i], 10);
+    } else if (a === '--image-max-height') {
+      opts.imageMaxHeight = parseInt(args[++i], 10);
     } else if (!a.startsWith('--')) {
       opts.url = a;
     } else {
@@ -183,11 +192,14 @@ Options:
   --max-depth <n>     Max DOM depth to recurse (default: 12)
   --min-size <px>     Skip nodes smaller than this in both dimensions (default: 4)
   --timeout <ms>      Navigation timeout in ms (default: 30000)
-  --output <file>     Write JSON to file instead of stdout
-  --save-image <path> Save wireframe PNG/JPG image of the layout (e.g. out.png)
-  --wait-for <sel>    Wait for a CSS selector to appear before inspecting
-  --tui               Launch interactive terminal UI showing a spatial wireframe
-  --help              Show this help`);
+  --output <file>          Write JSON to file instead of stdout
+  --save-image <path>      Save wireframe PNG/JPG image of the layout (e.g. out.png)
+  --image-scale <factor>   Scale factor relative to viewport size (default: 0.25)
+  --image-max-width <px>   Max image width in pixels; clamps after scale (default: 1200)
+  --image-max-height <px>  Max image height in pixels; clamps after scale (default: 900)
+  --wait-for <sel>         Wait for a CSS selector to appear before inspecting
+  --tui                    Launch interactive terminal UI showing a spatial wireframe
+  --help                   Show this help`);
 }
 
 // ─── browser-side inspection logic (serialised and eval'd in page) ──────────
@@ -541,23 +553,30 @@ function renderTui(result) {
  * border property get an additional stroke. Label text is drawn in a
  * contrasting color.
  *
- * @param {object} result   The full result object (url, viewport, layout tree)
+ * @param {object} result     The full result object (url, viewport, layout tree)
  * @param {string} imagePath  Output file path (.png / .jpg / .jpeg)
+ * @param {object} opts       Parsed CLI options (imageScale, imageMaxWidth, imageMaxHeight)
  */
-function renderImage(result, imagePath) {
+function renderImage(result, imagePath, opts) {
   const { createCanvas } = require(path.join(NM, 'canvas'));
-
-  const MAX_W = 1200;
-  const MAX_H = 900;
 
   const docRect = result.layout.rect;
   const srcW = Math.max(docRect.width, 1);
   const srcH = Math.max(docRect.height, 1);
 
-  // Scale to fit within MAX_W x MAX_H while preserving aspect ratio
-  const scale = Math.min(MAX_W / srcW, MAX_H / srcH, 1); // never upscale
-  const canvasW = Math.round(srcW * scale);
-  const canvasH = Math.round(srcH * scale);
+  // Apply --image-scale factor first
+  let canvasW = Math.round(srcW * opts.imageScale);
+  let canvasH = Math.round(srcH * opts.imageScale);
+
+  // Clamp to --image-max-width / --image-max-height while preserving aspect ratio
+  if (canvasW > opts.imageMaxWidth || canvasH > opts.imageMaxHeight) {
+    const clampScale = Math.min(opts.imageMaxWidth / canvasW, opts.imageMaxHeight / canvasH);
+    canvasW = Math.round(canvasW * clampScale);
+    canvasH = Math.round(canvasH * clampScale);
+  }
+
+  // Effective scale from source pixels to canvas pixels
+  const scale = canvasW / srcW;
 
   const canvas = createCanvas(canvasW, canvasH);
   const ctx = canvas.getContext('2d');
@@ -737,7 +756,7 @@ async function main() {
 
     // Save image wireframe if --save-image is set
     if (opts.saveImage) {
-      renderImage(result, opts.saveImage);
+      renderImage(result, opts.saveImage, opts);
     }
 
     // Launch TUI last (it takes over the process until 'q')

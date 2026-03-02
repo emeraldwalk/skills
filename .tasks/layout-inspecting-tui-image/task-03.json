@@ -1,10 +1,10 @@
 {
   "id": "task-03",
   "description": "Add a --image-scale <factor> option (float, default 0.25) and --image-max-width / --image-max-height options (integers, default 1200 and 900) to give users control over the wireframe image dimensions added in task-02. --image-scale sets a direct scale factor relative to the original viewport size (e.g., 0.25 = 25% of original). --image-max-width and --image-max-height cap the output dimensions. If both --image-scale and the max options are set, apply scale first then clamp to the max. Also update the --help text to document all three new options alongside --save-image. Update SKILL.md in /workspaces/skills/layout-inspecting/ to document the --save-image, --image-scale, --image-max-width, --image-max-height, and --tui flags with examples.",
-  "status": "todo",
+  "status": "completed",
   "created": "2026-03-02T14:40:58",
-  "updated": "2026-03-02T14:40:58",
-  "note": null,
+  "updated": "2026-03-02T15:25:31",
+  "note": "Added --image-scale (float, default 0.25), --image-max-width (int, default 1200), --image-max-height (int, default 900) options to inspect_layout.js. renderImage now applies scale first then clamps to max dims while preserving aspect ratio. Updated --help text and SKILL.md with full documentation and examples for --tui, --save-image, --image-scale, --image-max-width, --image-max-height.",
   "context": {
     "files": [
       "/workspaces/skills/layout-inspecting/scripts/inspect_layout.js",
@@ -26,5 +26,5 @@
   "depends_on": [
     "task-02"
   ],
-  "claimed_by": null
+  "claimed_by": "run_task_loop_1985"
 }
