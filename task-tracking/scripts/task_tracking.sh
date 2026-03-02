@@ -212,6 +212,11 @@ cmd_next() {
     local cstatus
     cstatus=$(jq -r '.status' "$cfile")
 
+    # Skip terminal statuses (guards against stale index)
+    if [[ "$cstatus" == "completed" || "$cstatus" == "skipped" ]]; then
+      continue
+    fi
+
     # Apply --skip-failed
     if [[ "$skip_failed" == "true" && "$cstatus" == "failed" ]]; then
       continue
