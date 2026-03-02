@@ -26,11 +26,12 @@ COMMANDS:
       Creates pb/ directory, main.go, .env file, updates .gitignore,
       initializes Go module, and runs go mod tidy
 
-  start [--reset] [--background]
+  start [--reset] [--background] [--https]
       Start the PocketBase dev server
       Stops existing instance if running, then starts server
       --reset: Remove pb_data before starting (fresh database)
       --background: Run server in background, log to pb/server.log
+      --https: Serve over HTTPS using certs/local.crt and certs/local.key
 
   stop
       Stop the running PocketBase server
@@ -141,6 +142,7 @@ cmd_stop() {
 cmd_start() {
   local RESET_FLAG=false
   local BACKGROUND_FLAG=false
+  local HTTPS_FLAG=false
 
   # Parse flags
   while [[ $# -gt 0 ]]; do
@@ -153,9 +155,13 @@ cmd_start() {
         BACKGROUND_FLAG=true
         shift
         ;;
+      --https)
+        HTTPS_FLAG=true
+        shift
+        ;;
       *)
         echo "Error: Unknown option '$1'"
-        echo "Usage: pbdev.sh start [--reset] [--background]"
+        echo "Usage: pbdev.sh start [--reset] [--background] [--https]"
         exit 1
         ;;
     esac
@@ -207,16 +213,24 @@ cmd_start() {
   # Start server
   cd "$PB_DIR"
 
+  if [ "$HTTPS_FLAG" = true ]; then
+    SERVE_ARGS="--https=0.0.0.0:$PORT"
+    export PB_TLS_CERT="../certs/local.crt"
+    export PB_TLS_KEY="../certs/local.key"
+  else
+    SERVE_ARGS="--http=0.0.0.0:$PORT"
+  fi
+
   if [ "$BACKGROUND_FLAG" = true ]; then
     echo "Starting PocketBase on port $PORT in background..."
     echo "Logs: $LOG_FILE"
-    nohup go run . serve --http="127.0.0.1:$PORT" > "$LOG_FILE" 2>&1 &
+    nohup go run . serve $SERVE_ARGS > "$LOG_FILE" 2>&1 &
     echo $! > "$PID_FILE"
     echo "Server started (PID: $(cat "$PID_FILE"))"
     echo "Run 'pbdev.sh stop' to stop the server"
   else
     echo "Starting PocketBase on port $PORT..."
-    exec go run . serve --http="127.0.0.1:$PORT"
+    exec go run . serve $SERVE_ARGS
   fi
 }
 
@@ -257,6 +271,22 @@ func main() {
 		TemplateLang: migratecmd.TemplateLangJS,
 		Automigrate:  isGoRun,
 	})
+
+	// Load custom TLS cert/key if env vars are set
+	certFile := os.Getenv("PB_TLS_CERT")
+	keyFile := os.Getenv("PB_TLS_KEY")
+	if certFile != "" && keyFile != "" {
+		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+			if err != nil {
+				return err
+			}
+			e.Server.TLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+			return e.Next()
+		})
+	}
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)
