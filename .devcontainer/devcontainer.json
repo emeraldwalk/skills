@@ -24,7 +24,11 @@
     "source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume",
 
     // Bind-mount auth token file so login persists across rebuilds
-    "source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json,type=bind,consistency=cached",
+
+    // Bind-mount skills from host into project directory for easier debugging of skills.
+    // Can remove the `readonly` setting if you want to edit them from the container
+    "source=${localEnv:HOME}/.claude/skills,target=${containerWorkspaceFolder}/.claude/skills,type=bind,consistency=cached,readonly"
   ],
 
   "postCreateCommand": ".devcontainer/setup.sh",
