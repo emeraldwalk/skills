@@ -92,6 +92,20 @@ function ensureDependencies() {
       process.exit(2);
     }
   }
+
+  // Also ensure canvas is available for the --save-image mode
+  const canvasEntry = path.join(NM, 'canvas');
+  if (!fs.existsSync(canvasEntry)) {
+    console.error('Installing canvas into skill scripts directory (first run only)...');
+    const canvasInstall = spawnSync('npm', ['install', '--prefix', SCRIPT_DIR, 'canvas'], {
+      stdio: 'inherit',
+      encoding: 'utf8',
+    });
+    if (canvasInstall.status !== 0) {
+      console.error('npm install canvas failed.');
+      process.exit(2);
+    }
+  }
 }
 
 ensureDependencies();
@@ -114,6 +128,7 @@ function parseArgs(argv) {
     output: null,
     waitFor: null,
     tui: false,
+    saveImage: null,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -139,6 +154,8 @@ function parseArgs(argv) {
       opts.waitFor = args[++i];
     } else if (a === '--tui') {
       opts.tui = true;
+    } else if (a === '--save-image') {
+      opts.saveImage = args[++i];
     } else if (!a.startsWith('--')) {
       opts.url = a;
     } else {
@@ -166,7 +183,8 @@ Options:
   --max-depth <n>     Max DOM depth to recurse (default: 12)
   --min-size <px>     Skip nodes smaller than this in both dimensions (default: 4)
   --timeout <ms>      Navigation timeout in ms (default: 30000)
-  --output <file>     Write JSON to file instead of stdout (incompatible with --tui)
+  --output <file>     Write JSON to file instead of stdout
+  --save-image <path> Save wireframe PNG/JPG image of the layout (e.g. out.png)
   --wait-for <sel>    Wait for a CSS selector to appear before inspecting
   --tui               Launch interactive terminal UI showing a spatial wireframe
   --help              Show this help`);
@@ -514,15 +532,138 @@ function renderTui(result) {
   screen.render();
 }
 
+// ─── image renderer ─────────────────────────────────────────────────────────
+
+/**
+ * Render the layout result as a wireframe PNG/JPG image using node-canvas.
+ * Nodes are drawn in tree order (parents first, children on top).
+ * Each node is a filled rectangle using its background color; nodes with a
+ * border property get an additional stroke. Label text is drawn in a
+ * contrasting color.
+ *
+ * @param {object} result   The full result object (url, viewport, layout tree)
+ * @param {string} imagePath  Output file path (.png / .jpg / .jpeg)
+ */
+function renderImage(result, imagePath) {
+  const { createCanvas } = require(path.join(NM, 'canvas'));
+
+  const MAX_W = 1200;
+  const MAX_H = 900;
+
+  const docRect = result.layout.rect;
+  const srcW = Math.max(docRect.width, 1);
+  const srcH = Math.max(docRect.height, 1);
+
+  // Scale to fit within MAX_W x MAX_H while preserving aspect ratio
+  const scale = Math.min(MAX_W / srcW, MAX_H / srcH, 1); // never upscale
+  const canvasW = Math.round(srcW * scale);
+  const canvasH = Math.round(srcH * scale);
+
+  const canvas = createCanvas(canvasW, canvasH);
+  const ctx = canvas.getContext('2d');
+
+  // Fill background with white
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  function parseRgb(colorStr) {
+    if (!colorStr || colorStr === 'transparent') return null;
+    const m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (!m) return null;
+    return { r: +m[1], g: +m[2], b: +m[3], a: m[4] !== undefined ? +m[4] : 1 };
+  }
+
+  function toCss(colorStr) {
+    const c = parseRgb(colorStr);
+    if (!c) return null;
+    return `rgba(${c.r},${c.g},${c.b},${c.a})`;
+  }
+
+  function contrastColor(colorStr) {
+    const c = parseRgb(colorStr);
+    if (!c) return '#000000';
+    const lum = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+    return lum > 128 ? '#000000' : '#ffffff';
+  }
+
+  // Flatten tree in DFS pre-order (parents before children)
+  function flattenTree(node, out) {
+    out.push(node);
+    if (node.children) {
+      for (const child of node.children) flattenTree(child, out);
+    }
+  }
+
+  const nodes = [];
+  flattenTree(result.layout, nodes);
+
+  const FONT_SIZE = Math.max(9, Math.round(11 * scale));
+  ctx.font = `${FONT_SIZE}px sans-serif`;
+  ctx.textBaseline = 'top';
+
+  for (const node of nodes) {
+    const { x, y, width, height } = node.rect;
+    const sx = Math.round(x * scale);
+    const sy = Math.round(y * scale);
+    const sw = Math.max(1, Math.round(width * scale));
+    const sh = Math.max(1, Math.round(height * scale));
+
+    // Fill rectangle with background color
+    const bgCss = toCss(node.background);
+    if (bgCss) {
+      ctx.fillStyle = bgCss;
+      ctx.fillRect(sx, sy, sw, sh);
+    }
+
+    // Draw border stroke if the node has a border
+    if (node.border) {
+      const borderCss = toCss(node.border);
+      if (borderCss) {
+        ctx.strokeStyle = borderCss;
+        ctx.lineWidth = Math.max(1, Math.round(scale));
+        ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
+      }
+    }
+
+    // Draw label text
+    if (node.label) {
+      const fg = contrastColor(node.background);
+      ctx.fillStyle = fg;
+      // Clip label to the box width with a small padding
+      const pad = 3;
+      const maxTextW = sw - pad * 2;
+      if (maxTextW > 10) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(sx, sy, sw, sh);
+        ctx.clip();
+        ctx.fillText(node.label, sx + pad, sy + pad, maxTextW);
+        ctx.restore();
+      }
+    }
+  }
+
+  // Determine format from file extension
+  const ext = path.extname(imagePath).toLowerCase();
+  let buffer;
+  if (ext === '.jpg' || ext === '.jpeg') {
+    buffer = canvas.toBuffer('image/jpeg', { quality: 0.92 });
+  } else {
+    buffer = canvas.toBuffer('image/png');
+  }
+
+  fs.writeFileSync(imagePath, buffer);
+  console.error(`Layout image written to ${imagePath} (${canvasW}x${canvasH})`);
+}
+
 // ─── main ───────────────────────────────────────────────────────────────────
 
 async function main() {
   const opts = parseArgs(process.argv);
 
-  if (opts.tui && opts.output) {
-    console.error('Error: --tui and --output are incompatible. Use one or the other.');
-    process.exit(1);
-  }
+  // --tui, --output, and --save-image are all compatible with each other
 
   let browser;
   try {
@@ -585,17 +726,24 @@ async function main() {
       layout: tree,
     };
 
+    // Write JSON output if --output is set, or to stdout if no other output flags
+    if (opts.output) {
+      const json = JSON.stringify(result, null, 2);
+      fs.writeFileSync(opts.output, json, 'utf8');
+      console.error(`Layout written to ${opts.output}`);
+    } else if (!opts.tui && !opts.saveImage) {
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    }
+
+    // Save image wireframe if --save-image is set
+    if (opts.saveImage) {
+      renderImage(result, opts.saveImage);
+    }
+
+    // Launch TUI last (it takes over the process until 'q')
     if (opts.tui) {
       renderTui(result);
       // renderTui sets up the blessed event loop; process stays alive until 'q'
-    } else {
-      const json = JSON.stringify(result, null, 2);
-      if (opts.output) {
-        fs.writeFileSync(opts.output, json, 'utf8');
-        console.error(`Layout written to ${opts.output}`);
-      } else {
-        process.stdout.write(json + '\n');
-      }
     }
   } finally {
     await browser.close();

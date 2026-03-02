@@ -10,7 +10,7 @@
     {
       "id": "task-02",
       "description": "Add a --save-image <path> flag to inspect_layout.js that renders the layout tree as a wireframe PNG. The wireframe should be a scaled-down visual diagram (not a browser screenshot) representing the layout structure as colored rectangles on a canvas. The image dimensions should be proportional to the original viewport but smaller — scale to fit within 1200x900 px by default, preserving the aspect ratio of the captured viewport. Each node in the layout JSON tree (rect, background, border) should be drawn as a filled rectangle using its background color, with an optional border stroke if the node has a border property. Overlay the node's label text in a contrasting color. Use the 'canvas' npm package (node-canvas) installed into the skill's own node_modules at /workspaces/skills/layout-inspecting/scripts/node_modules/. Extend the existing self-install bootstrap (lines 38-83 of inspect_layout.js) to auto-install 'canvas'. Draw nodes in tree order (parents first, children on top) so child regions visually overlap parents. The output file path comes from --save-image. Supported formats: .png (always), .jpg if the path ends in .jpg/.jpeg. This flag is compatible with --output and --tui: all three can coexist (compute layout once, write JSON if --output is set, save image if --save-image is set, launch TUI if --tui is set).",
-      "status": "todo"
+      "status": "completed"
     },
     {
       "id": "task-03",
