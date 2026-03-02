@@ -78,6 +78,20 @@ function ensureDependencies() {
       process.exit(2);
     }
   }
+
+  // Also ensure blessed is available for the --tui mode
+  const blessedEntry = path.join(NM, 'blessed');
+  if (!fs.existsSync(blessedEntry)) {
+    console.error('Installing blessed into skill scripts directory (first run only)...');
+    const blessedInstall = spawnSync('npm', ['install', '--prefix', SCRIPT_DIR, 'blessed'], {
+      stdio: 'inherit',
+      encoding: 'utf8',
+    });
+    if (blessedInstall.status !== 0) {
+      console.error('npm install blessed failed.');
+      process.exit(2);
+    }
+  }
 }
 
 ensureDependencies();
@@ -99,6 +113,7 @@ function parseArgs(argv) {
     timeout: 30000,
     output: null,
     waitFor: null,
+    tui: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -122,6 +137,8 @@ function parseArgs(argv) {
       opts.output = args[++i];
     } else if (a === '--wait-for') {
       opts.waitFor = args[++i];
+    } else if (a === '--tui') {
+      opts.tui = true;
     } else if (!a.startsWith('--')) {
       opts.url = a;
     } else {
@@ -149,8 +166,9 @@ Options:
   --max-depth <n>     Max DOM depth to recurse (default: 12)
   --min-size <px>     Skip nodes smaller than this in both dimensions (default: 4)
   --timeout <ms>      Navigation timeout in ms (default: 30000)
-  --output <file>     Write JSON to file instead of stdout
+  --output <file>     Write JSON to file instead of stdout (incompatible with --tui)
   --wait-for <sel>    Wait for a CSS selector to appear before inspecting
+  --tui               Launch interactive terminal UI showing a spatial wireframe
   --help              Show this help`);
 }
 
@@ -391,10 +409,120 @@ function buildLayoutTree(config) {
   };
 }
 
+// ─── TUI renderer ───────────────────────────────────────────────────────────
+
+/**
+ * Render the layout result as an interactive blessed terminal UI.
+ * Each node is drawn as a box at its proportional position, sized
+ * proportionally to the terminal window.  Tree order (root first) ensures
+ * children paint on top of parents.
+ */
+function renderTui(result) {
+  const blessed = require(path.join(NM, 'blessed'));
+
+  const screen = blessed.screen({
+    smartCSR: true,
+    title: `Layout: ${result.url}`,
+    fullUnicode: true,
+  });
+
+  const termCols = screen.width;
+  const termRows = screen.height;
+
+  const docRect = result.layout.rect;
+  const pageW = Math.max(docRect.width, 1);
+  const pageH = Math.max(docRect.height, 1);
+
+  // Parse "rgb(r,g,b)" / "rgba(r,g,b,a)" into {r,g,b} or null
+  function parseRgb(colorStr) {
+    if (!colorStr || colorStr === 'transparent') return null;
+    const m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    return m ? { r: +m[1], g: +m[2], b: +m[3] } : null;
+  }
+
+  // Convert RGB to "#rrggbb" hex for blessed style
+  function toHex(r, g, b) {
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Choose black or white foreground based on background luminance
+  function contrastFg(color) {
+    if (!color) return '#ffffff';
+    const lum = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b;
+    return lum > 128 ? '#000000' : '#ffffff';
+  }
+
+  // Flatten tree in DFS pre-order so parents are drawn before children
+  function flattenTree(node, out) {
+    out.push(node);
+    if (node.children) {
+      for (const child of node.children) flattenTree(child, out);
+    }
+  }
+
+  const nodes = [];
+  flattenTree(result.layout, nodes);
+
+  for (const node of nodes) {
+    const { x, y, width, height } = node.rect;
+
+    // Scale pixel coords to terminal character cells
+    const left = Math.round(x / pageW * termCols);
+    const top  = Math.round(y / pageH * termRows);
+    const w    = Math.max(3, Math.round(width  / pageW * termCols));
+    const h    = Math.max(2, Math.round(height / pageH * termRows));
+
+    const color = parseRgb(node.background);
+    const bgHex = color ? toHex(color.r, color.g, color.b) : '#1a1a1a';
+    const fgHex = contrastFg(color);
+
+    const box = blessed.box({
+      left,
+      top,
+      width: w,
+      height: h,
+      content: node.label || '',
+      tags: false,
+      border: { type: 'line' },
+      style: {
+        bg: bgHex,
+        fg: fgHex,
+        border: { fg: fgHex },
+      },
+    });
+
+    screen.append(box);
+  }
+
+  // Help overlay in bottom-right corner
+  const helpText = ' q:quit ';
+  const helpBox = blessed.box({
+    bottom: 0,
+    right: 0,
+    width: helpText.length,
+    height: 1,
+    content: helpText,
+    style: { fg: 'white', bg: 'black' },
+  });
+  screen.append(helpBox);
+
+  screen.key(['q', 'Q', 'C-c'], () => {
+    screen.destroy();
+    process.exit(0);
+  });
+
+  screen.render();
+}
+
 // ─── main ───────────────────────────────────────────────────────────────────
 
 async function main() {
   const opts = parseArgs(process.argv);
+
+  if (opts.tui && opts.output) {
+    console.error('Error: --tui and --output are incompatible. Use one or the other.');
+    process.exit(1);
+  }
 
   let browser;
   try {
@@ -457,13 +585,17 @@ async function main() {
       layout: tree,
     };
 
-    const json = JSON.stringify(result, null, 2);
-
-    if (opts.output) {
-      fs.writeFileSync(opts.output, json, 'utf8');
-      console.error(`Layout written to ${opts.output}`);
+    if (opts.tui) {
+      renderTui(result);
+      // renderTui sets up the blessed event loop; process stays alive until 'q'
     } else {
-      process.stdout.write(json + '\n');
+      const json = JSON.stringify(result, null, 2);
+      if (opts.output) {
+        fs.writeFileSync(opts.output, json, 'utf8');
+        console.error(`Layout written to ${opts.output}`);
+      } else {
+        process.stdout.write(json + '\n');
+      }
     }
   } finally {
     await browser.close();
