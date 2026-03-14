@@ -33,17 +33,35 @@ sys.path.insert(0, str(Path(__file__).parent))
 from db import get_connection, encode_embedding
 from embedder import embed_texts
 
+_SKILL_DBS = Path(__file__).parent.parent / "dbs"
+
+
+def _resolve_db(db_arg: str | None) -> Path:
+    """Return DB path: explicit arg, auto-detected from dbs/, or error."""
+    if db_arg:
+        return Path(db_arg)
+    dbs = list(_SKILL_DBS.glob("*.db")) if _SKILL_DBS.exists() else []
+    if len(dbs) == 1:
+        print(f"Using {dbs[0]}")
+        return dbs[0]
+    if len(dbs) > 1:
+        names = "  \n".join(str(d) for d in dbs)
+        print(f"ERROR: Multiple databases found — specify one with --db:\n  {names}")
+        sys.exit(1)
+    print(f"ERROR: No database found in {_SKILL_DBS}. Parse some docs first.")
+    sys.exit(1)
+
 
 def main():
     p = argparse.ArgumentParser(description="Add embeddings to parsed docs DB")
-    p.add_argument("--db",              required=True, help="Path to SQLite database")
+    p.add_argument("--db",              default=None, help="Path to SQLite database (default: auto-detect from dbs/)")
     p.add_argument("--batch-size",      type=int, default=64, help="Embedding batch size (default: 64)")
     p.add_argument("--force",           action="store_true", help="Re-embed all chunks, not just missing")
     p.add_argument("--corpus-name",     default=None, help="Limit to a specific corpus name")
     p.add_argument("--corpus-version",  default=None, help="Limit to a specific corpus version")
     args = p.parse_args()
 
-    db_path = Path(args.db)
+    db_path = _resolve_db(args.db)
     if not db_path.exists():
         print(f"ERROR: Database not found: {db_path}")
         sys.exit(1)

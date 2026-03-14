@@ -39,6 +39,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+_SKILL_DBS = Path(__file__).parent.parent / "dbs"
+
 from db import (
     init_db,
     hash_file,
@@ -297,7 +299,7 @@ def main():
         description="Parse markdown documentation into a SQLite docs database"
     )
     p.add_argument("--input",           required=True, help="Root directory of documentation")
-    p.add_argument("--db",              required=True, help="Path to output SQLite database")
+    p.add_argument("--db",              default=None, help="Path to output SQLite database (default: dbs/<corpus-name>.db)")
     p.add_argument("--corpus-name",     required=True, help="Corpus name (e.g. 'react', 'typescript')")
     p.add_argument("--corpus-version",  required=True, help="Corpus version (e.g. '18', '5.4')")
     p.add_argument("--glob",            default="**/*.md", help="File glob pattern (default: **/*.md)")
@@ -312,7 +314,7 @@ def main():
         print(f"ERROR: Input directory not found: {input_dir}")
         sys.exit(1)
 
-    db_path = Path(args.db)
+    db_path = Path(args.db) if args.db else _SKILL_DBS / f"{args.corpus_name}.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     md_files = sorted(input_dir.glob(args.glob))

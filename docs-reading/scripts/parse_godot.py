@@ -44,6 +44,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+_SKILL_DIR = Path(__file__).parent.parent
+_DEFAULT_DB = str(_SKILL_DIR / "dbs" / "godot.db")
+
 from db import (
     init_db,
     hash_file,
@@ -175,7 +178,7 @@ def main():
         description="Parse Godot XML class reference docs into docs-mcp SQLite DB"
     )
     p.add_argument("--godot-repo",      required=True, help="Path to godotengine/godot repo root")
-    p.add_argument("--db",              required=True, help="Path to output SQLite database")
+    p.add_argument("--db",              default=_DEFAULT_DB, help=f"Path to output SQLite database (default: {_DEFAULT_DB})")
     p.add_argument("--corpus-name",     default="godot", help="Corpus name (default: godot)")
     p.add_argument("--corpus-version",  default=None,
                    help="Corpus version (default: auto-detected from repo)")

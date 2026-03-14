@@ -34,6 +34,24 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from db import get_connection, decode_embedding, list_corpuses as db_list_corpuses
 
+_SKILL_DBS = Path(__file__).parent.parent / "dbs"
+
+
+def _resolve_db(db_arg: str | None) -> Path:
+    """Return DB path: explicit arg, auto-detected from dbs/, or error."""
+    if db_arg:
+        return Path(db_arg)
+    dbs = list(_SKILL_DBS.glob("*.db")) if _SKILL_DBS.exists() else []
+    if len(dbs) == 1:
+        print(f"Using {dbs[0]}")
+        return dbs[0]
+    if len(dbs) > 1:
+        names = "\n  ".join(str(d) for d in dbs)
+        print(f"ERROR: Multiple databases found — specify one with --db:\n  {names}")
+        sys.exit(1)
+    print(f"ERROR: No database found in {_SKILL_DBS}. Parse some docs first.")
+    sys.exit(1)
+
 # ── fastmcp import ────────────────────────────────────────────────────────────
 try:
     from fastmcp import FastMCP
@@ -559,12 +577,12 @@ def get_related_chunks(chunk_id: int, limit: int = 5) -> list[dict]:
 
 def main():
     p = argparse.ArgumentParser(description="docs-reading MCP server")
-    p.add_argument("--db",              required=True, help="Path to SQLite database")
+    p.add_argument("--db",              default=None, help="Path to SQLite database (default: auto-detect from dbs/)")
     p.add_argument("--corpus-name",     default=None,  help="Default corpus to search (optional)")
     p.add_argument("--corpus-version",  default=None,  help="Default corpus version (optional)")
     args = p.parse_args()
 
-    db_path = Path(args.db).resolve()
+    db_path = _resolve_db(args.db).resolve()
     if not db_path.exists():
         print(f"ERROR: Database not found: {db_path}")
         print("Parse some documentation first:")
