@@ -116,3 +116,5 @@ Typical agent workflow:
 Scripts use `uv run` with inline dependency blocks — no install step needed. Just run with `uv run scripts/<script>.py ...` and uv handles the environment automatically.
 
 Requires `uv` to be installed: https://docs.astral.sh/uv/getting-started/installation/
+
+**Python version note:** `parse_docs.py` and `parse_godot.py` work on any Python version when run with `--no-embeddings` (no heavy dependencies). Generating embeddings requires Python ≤ 3.13 because `torch` (a `sentence-transformers` dependency) has no wheels for Python 3.14+ yet. Use `add_embeddings.py` on a Python ≤ 3.13 environment to add embeddings after a no-embeddings parse.

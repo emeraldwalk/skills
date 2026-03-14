@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = [
-#   "sentence-transformers",
-#   "numpy",
-# ]
+# dependencies = []
 # ///
 """
 parse_godot.py — Parse Godot 4.x XML class reference docs into docs-mcp.
@@ -59,7 +56,6 @@ from db import (
     list_all_files,
 )
 from godot_xml_parser import parse_class_xml
-from embedder import embed_texts
 
 
 def _detect_godot_version(godot_repo: Path) -> str:
@@ -160,6 +156,7 @@ def process_file(
         return "empty", 0
 
     if generate_embeddings:
+        from embedder import embed_texts
         plain_texts = [c["content_plain"] for c in chunks]
         embeddings = embed_texts(plain_texts)
         for chunk, emb in zip(chunks, embeddings):

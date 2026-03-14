@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = [
-#   "sentence-transformers",
-#   "numpy",
-# ]
+# dependencies = []
 # ///
 """
 parse_docs.py — Generic heading-aware markdown parser for any documentation corpus.
@@ -52,8 +49,6 @@ from db import (
     update_file_chunk_count,
     list_all_files,
 )
-from embedder import embed_texts
-
 
 # ── Token counting ────────────────────────────────────────────────────────────
 
@@ -279,6 +274,7 @@ def process_file(
         return "empty", 0
 
     if generate_embeddings:
+        from embedder import embed_texts
         plain_texts = [c["content_plain"] for c in chunks]
         embeddings = embed_texts(plain_texts)
         for chunk, emb in zip(chunks, embeddings):
