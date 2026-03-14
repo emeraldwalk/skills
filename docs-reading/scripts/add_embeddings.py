@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "sentence-transformers",
+#   "numpy",
+# ]
+# ///
 """
 add_embeddings.py — Add or update embeddings for chunks that don't have them.
 

@@ -15,7 +15,7 @@ docs-reading is a two-phase pipeline:
 ### Generic Markdown
 
 ```bash
-python scripts/parse_docs.py \
+uv run scripts/parse_docs.py \
   --input /path/to/docs \
   --db ./docs.db \
   --corpus-name mylib \
@@ -27,7 +27,7 @@ Options: `--glob "**/*.md"` (default), `--max-tokens 512`, `--min-tokens 50`, `-
 ### Godot XML
 
 ```bash
-python scripts/parse_godot.py \
+uv run scripts/parse_godot.py \
   --godot-repo ./godot \
   --db ./godot.db \
   --corpus-name godot \
@@ -41,16 +41,16 @@ Parses the engine's native XML class reference (one chunk per method/property/si
 Multiple corpora can share one DB — just run parsers targeting the same `--db`:
 
 ```bash
-python scripts/parse_docs.py --input ./react-docs --db ./project.db --corpus-name react --corpus-version 18
-python scripts/parse_docs.py --input ./typescript-docs --db ./project.db --corpus-name typescript --corpus-version 5.4
+uv run scripts/parse_docs.py --input ./react-docs --db ./project.db --corpus-name react --corpus-version 18
+uv run scripts/parse_docs.py --input ./typescript-docs --db ./project.db --corpus-name typescript --corpus-version 5.4
 ```
 
 ### Embeddings (optional but recommended)
 
 ```bash
-python scripts/add_embeddings.py --db ./docs.db
+uv run scripts/add_embeddings.py --db ./docs.db
 # Limit to one corpus:
-python scripts/add_embeddings.py --db ./project.db --corpus-name react --corpus-version 18
+uv run scripts/add_embeddings.py --db ./project.db --corpus-name react --corpus-version 18
 ```
 
 The first run downloads the `all-MiniLM-L6-v2` model (~80 MB, cached locally).
@@ -61,10 +61,10 @@ Start the server pointing at your database:
 
 ```bash
 # Single corpus
-python scripts/mcp_server.py --db ./godot.db --corpus-name godot --corpus-version 4.6
+uv run scripts/mcp_server.py --db ./godot.db --corpus-name godot --corpus-version 4.6
 
 # Multi-corpus (search across all corpora)
-python scripts/mcp_server.py --db ./project.db
+uv run scripts/mcp_server.py --db ./project.db
 ```
 
 ### Claude Code MCP config
@@ -75,8 +75,9 @@ Add to your `claude_code` settings (`~/.claude/settings.json` or project `.claud
 {
   "mcpServers": {
     "docs-reading": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "run",
         "/path/to/skills/docs-reading/scripts/mcp_server.py",
         "--db", "/path/to/your/docs.db",
         "--corpus-name", "godot",
@@ -112,8 +113,6 @@ Typical agent workflow:
 
 ## Dependencies
 
-```bash
-pip install fastmcp sentence-transformers numpy
-```
+Scripts use `uv run` with inline dependency blocks — no install step needed. Just run with `uv run scripts/<script>.py ...` and uv handles the environment automatically.
 
-For CPU-only environments: `pip install torch --index-url https://download.pytorch.org/whl/cpu`
+Requires `uv` to be installed: https://docs.astral.sh/uv/getting-started/installation/

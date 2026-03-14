@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "sentence-transformers",
+#   "numpy",
+# ]
+# ///
 """
 parse_docs.py — Generic heading-aware markdown parser for any documentation corpus.
 

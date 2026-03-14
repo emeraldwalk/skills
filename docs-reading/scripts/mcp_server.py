@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "fastmcp",
+#   "sentence-transformers",
+#   "numpy",
+# ]
+# ///
 """
 mcp_server.py — MCP server for the docs-reading skill.
 

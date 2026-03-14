@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "sentence-transformers",
+#   "numpy",
+# ]
+# ///
 """
 parse_godot.py — Parse Godot 4.x XML class reference docs into docs-mcp.
 
