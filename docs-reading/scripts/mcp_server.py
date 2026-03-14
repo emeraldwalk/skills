@@ -218,22 +218,32 @@ def search_docs(
         return []
 
     # ── FTS5 search ───────────────────────────────────────────────────────────
+    # Build a prefix-match FTS5 query joined with OR so that partial matches
+    # still return results (e.g. "arguments" not in index won't kill the query).
+    # Each token gets a trailing * so "CharacterBody" matches "CharacterBody2D".
+    _FTS5_OPERATORS = {"AND", "OR", "NOT"}
+    tokens = [
+        t if t.endswith("*") or t in _FTS5_OPERATORS else t + "*"
+        for t in query.split()
+    ]
+    fts_query = " OR ".join(tokens)
+
     placeholders = ",".join("?" * len(corpus_ids))
     fts_rows = conn.execute(
         f"""SELECT c.id, c.corpus_id, c.heading_path, c.content, c.content_plain,
                    c.token_count, c.file_id, c.embedding,
                    f.rel_path AS source_file,
                    cp.name AS corpus_name, cp.version AS corpus_version,
-                   rank AS fts_rank
+                   bm25(chunks_fts, 1, 10) AS fts_rank
             FROM chunks_fts
             JOIN chunks c ON c.id = chunks_fts.rowid
             JOIN files f ON f.id = c.file_id
             JOIN corpuses cp ON cp.id = c.corpus_id
             WHERE chunks_fts MATCH ?
               AND c.corpus_id IN ({placeholders})
-            ORDER BY rank
+            ORDER BY bm25(chunks_fts, 1, 10)
             LIMIT ?""",
-        (query, *corpus_ids, limit * 2),
+        (fts_query, *corpus_ids, limit * 2),
     ).fetchall()
 
     # Normalise FTS ranks (rank is negative in FTS5; lower = better match)
@@ -472,12 +482,9 @@ def list_corpuses() -> list[dict]:
     conn = _conn()
     rows = conn.execute(
         """SELECT cp.id, cp.name, cp.version, cp.created_at,
-                  COUNT(DISTINCT f.id) AS file_count,
-                  COUNT(c.id) AS chunk_count
+                  (SELECT COUNT(*) FROM files f WHERE f.corpus_id = cp.id) AS file_count,
+                  (SELECT COUNT(*) FROM chunks c WHERE c.corpus_id = cp.id) AS chunk_count
            FROM corpuses cp
-           LEFT JOIN files f ON f.corpus_id = cp.id
-           LEFT JOIN chunks c ON c.corpus_id = cp.id
-           GROUP BY cp.id
            ORDER BY cp.name, cp.version"""
     ).fetchall()
 
