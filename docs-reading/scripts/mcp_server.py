@@ -3,7 +3,6 @@
 # requires-python = ">=3.9,<3.14"
 # dependencies = [
 #   "fastmcp",
-#   "sentence-transformers",
 #   "numpy",
 # ]
 # ///
