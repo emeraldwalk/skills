@@ -1,6 +1,6 @@
 ---
 name: docs-reading
-description: Parses technical documentation corpora (Markdown or Godot XML) into a local SQLite database with full-text and semantic search, then serves them to agents via an MCP server. Use when an agent needs to read, search, or reference documentation for a library, framework, or engine — especially large docs that would exceed context limits.
+description: Parses technical documentation corpora (Markdown or Godot XML) into a local SQLite database with full-text and semantic search, then queries them via a CLI tool. Use when an agent needs to read, search, or reference documentation for a library, framework, or engine — especially large docs that would exceed context limits.
 ---
 
 ## Overview
@@ -8,7 +8,7 @@ description: Parses technical documentation corpora (Markdown or Godot XML) into
 docs-reading is a two-phase pipeline:
 
 1. **Parse** — A human runs a parser script once to ingest documentation into a local SQLite database with FTS5 full-text search and optional sentence-embedding vectors. Multiple corpora and versions can coexist in a single DB.
-2. **Serve** — An MCP server exposes 6 tools that agents use to search, browse, and retrieve documentation at query time without ever loading the raw files into context.
+2. **Query** — Claude calls `scripts/docs.py` directly via Bash to search, browse, and retrieve documentation without loading the raw files into context.
 
 ## Parsing (human setup step)
 
@@ -55,61 +55,50 @@ uv run scripts/add_embeddings.py --db ./project.db --corpus-name react --corpus-
 
 The first run downloads the `all-MiniLM-L6-v2` model (~80 MB, cached locally).
 
-## MCP Server (agent consumption)
+## Querying (agent usage)
 
-Start the server pointing at your database:
+Run `scripts/docs.py` via Bash. Output is compact JSON. Pass `--pretty` for human-readable output.
 
 ```bash
-# Single corpus
-uv run scripts/mcp_server.py --db ./godot.db --corpus-name godot --corpus-version 4.6
+# Search (hybrid FTS5 + semantic, or FTS-only if no embeddings)
+uv run scripts/docs.py search "move_and_slide physics" --corpus godot --version 4.6
 
-# Multi-corpus (search across all corpora)
-uv run scripts/mcp_server.py --db ./project.db
+# Fetch a chunk by ID
+uv run scripts/docs.py chunk 4821
+
+# Heading outline for a file (browse before fetching full content)
+uv run scripts/docs.py outline "CharacterBody2D.xml" --corpus godot
+
+# List all corpora in the DB
+uv run scripts/docs.py corpuses
+
+# List all parsed files
+uv run scripts/docs.py files --corpus godot
+
+# Semantically similar chunks (requires embeddings)
+uv run scripts/docs.py related 4821 --limit 5
 ```
 
-### Claude Code MCP config
+All commands accept `--db /path/to/docs.db`. If omitted, auto-detects a single `.db` file from the skill's `dbs/` directory.
 
-Add to your `claude_code` settings (`~/.claude/settings.json` or project `.claude/settings.json`):
+Run all `docs.py` commands from the skill's root directory (the directory containing `scripts/`), or pass an explicit `--db` path.
 
-```json
-{
-  "mcpServers": {
-    "docs-reading": {
-      "command": "uv",
-      "args": [
-        "run",
-        "/path/to/skills/docs-reading/scripts/mcp_server.py",
-        "--db", "/path/to/your/docs.db",
-        "--corpus-name", "godot",
-        "--corpus-version", "4.6"
-      ]
-    }
-  }
-}
+## Typical agent workflow
+
+```bash
+# 1. Confirm what corpora are available
+uv run scripts/docs.py corpuses
+
+# 2. Search — always pass --corpus (and --version if multiple versions exist)
+#    Without a filter, results from different versions mix and may conflict.
+uv run scripts/docs.py search "your query" --corpus mylib --version 1.0
+
+# 3. Browse a file's structure before loading full content
+uv run scripts/docs.py outline "path/to/file.md" --corpus mylib
+
+# 4. Fetch a specific chunk by ID from search results
+uv run scripts/docs.py chunk 4821
 ```
-
-For multi-corpus, omit `--corpus-name` and `--corpus-version`.
-
-## Agent usage guidance
-
-Always pass `corpus_name` (and `corpus_version` if relevant) to `search_docs` unless you explicitly want cross-corpus results. Without a filter, results from multiple versions of the same library will mix and may conflict.
-
-Typical agent workflow:
-1. Call `list_corpuses` to confirm what's available and which versions are loaded.
-2. Call `search_docs` with `corpus_name` and `corpus_version` set.
-3. Use `get_doc_outline` to browse a file's structure before fetching full chunks.
-4. Call `get_chunk` by ID to retrieve full content for a specific result.
-
-## MCP Tools available to agents
-
-| Tool | Description |
-|------|-------------|
-| `search_docs` | Hybrid FTS5 + semantic search. Accepts `query`, `limit`, optional `corpus_name`/`corpus_version` filters. |
-| `get_chunk` | Fetch full content of a chunk by integer ID. |
-| `get_doc_outline` | Heading tree for a source file — useful before fetching full content. |
-| `list_files` | List all parsed files with corpus, version, path, chunk count. |
-| `list_corpuses` | List all corpora with file and chunk counts. |
-| `get_related_chunks` | Semantically similar chunks to a given chunk ID (requires embeddings). |
 
 ## Dependencies
 
@@ -117,4 +106,4 @@ Scripts use `uv run` with inline dependency blocks — no install step needed. J
 
 Requires `uv` to be installed: https://docs.astral.sh/uv/getting-started/installation/
 
-**Python version note:** `parse_docs.py` and `parse_godot.py` work on any Python version when run with `--no-embeddings` (no heavy dependencies). Generating embeddings requires Python ≤ 3.13 because `torch` (a `sentence-transformers` dependency) has no wheels for Python 3.14+ yet. Use `add_embeddings.py` on a Python ≤ 3.13 environment to add embeddings after a no-embeddings parse.
+**Python version note:** `parse_docs.py` and `parse_godot.py` work on any Python version when run with `--no-embeddings` (no heavy dependencies). Generating embeddings requires a Python version supported by `torch` (a `sentence-transformers` dependency). If embedding generation fails due to a Python version incompatibility, parse with `--no-embeddings` first, then run `add_embeddings.py` in a compatible environment.
