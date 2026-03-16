@@ -63,7 +63,7 @@ cmd_create_list() {
   local path
   path=$(get_list_path "$name")
 
-  if [[ -d "$list_dir" ]]; then
+  if [[ -f "$path" ]]; then
     echo "Error: List '${name}' already exists."
     return 1
   fi
