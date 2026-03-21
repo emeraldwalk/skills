@@ -21,13 +21,23 @@ from typing import Optional
 
 # ── Connection helpers ────────────────────────────────────────────────────────
 
-def get_connection(db_path: str) -> sqlite3.Connection:
-    """Open a connection with Row factory and WAL journal mode enabled."""
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA synchronous=NORMAL")
+def get_connection(db_path: str, readonly: bool = False) -> sqlite3.Connection:
+    """Open a connection with Row factory.
+
+    Pass readonly=True to open in immutable read-only mode (no WAL files
+    created, works on read-only filesystems).
+    """
+    if readonly:
+        uri = f"file:{db_path}?mode=ro&immutable=1"
+        conn = sqlite3.connect(uri, uri=True)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+    else:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 

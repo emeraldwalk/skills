@@ -38,21 +38,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from db import get_connection, decode_embedding, list_corpuses as db_list_corpuses
 
-_SKILL_DBS = Path(__file__).parent.parent / "dbs"
-
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _resolve_db(db_arg: Optional[str]) -> Path:
     if db_arg:
         return Path(db_arg)
-    dbs = list(_SKILL_DBS.glob("*.db")) if _SKILL_DBS.exists() else []
-    if len(dbs) == 1:
-        return dbs[0]
-    if len(dbs) > 1:
-        names = "\n  ".join(str(d) for d in dbs)
-        _die(f"Multiple databases found — specify one with --db:\n  {names}")
-    _die(f"No database found in {_SKILL_DBS}. Parse some docs first.")
+    _die("--db is required. Pass the path to your SQLite database.")
 
 
 def _die(msg: str) -> None:
@@ -431,7 +422,7 @@ def main():
             "  uv run scripts/parse_docs.py --input /path/to/docs --db ./docs.db --corpus-name mylib --corpus-version 1.0"
         )
 
-    conn = get_connection(str(db_path))
+    conn = get_connection(str(db_path), readonly=True)
 
     dispatch = {
         "search":   cmd_search,

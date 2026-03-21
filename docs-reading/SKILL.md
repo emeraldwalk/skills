@@ -55,49 +55,58 @@ uv run scripts/add_embeddings.py --db ./project.db --corpus-name react --corpus-
 
 The first run downloads the `all-MiniLM-L6-v2` model (~80 MB, cached locally).
 
-## Querying (agent usage)
+## DB convention
 
-Run `scripts/docs.py` via Bash. Output is compact JSON. Pass `--pretty` for human-readable output.
+Each skill that uses docs-reading stores its DB in its own `dbs/` directory, relative to that skill's install location:
 
-```bash
-# Search (hybrid FTS5 + semantic, or FTS-only if no embeddings)
-uv run scripts/docs.py search "move_and_slide physics" --corpus godot --version 4.6
-
-# Fetch a chunk by ID
-uv run scripts/docs.py chunk 4821
-
-# Heading outline for a file (browse before fetching full content)
-uv run scripts/docs.py outline "CharacterBody2D.xml" --corpus godot
-
-# List all corpora in the DB
-uv run scripts/docs.py corpuses
-
-# List all parsed files
-uv run scripts/docs.py files --corpus godot
-
-# Semantically similar chunks (requires embeddings)
-uv run scripts/docs.py related 4821 --limit 5
+```
+$THAT_SKILL_DIR/dbs/<name>.db
 ```
 
-All commands accept `--db /path/to/docs.db`. If omitted, auto-detects a single `.db` file from the skill's `dbs/` directory.
+Where `THAT_SKILL_DIR` is the directory containing the consuming skill's `SKILL.md`. Always pass `--db` explicitly — there is no auto-detection.
 
-Run all `docs.py` commands from the skill's root directory (the directory containing `scripts/`), or pass an explicit `--db` path.
+## Querying (agent usage)
+
+Run `scripts/docs.py` via Bash from the `docs-reading` skill root. Output is compact JSON. Pass `--pretty` for human-readable output.
+
+`--db` is required. Always pass `--corpus` too (and `--version` if multiple versions exist).
+
+```bash
+cd ~/.claude/skills/docs-reading
+
+# Search (hybrid FTS5 + semantic, or FTS-only if no embeddings)
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db search "move_and_slide physics" --corpus godot --version 4.6
+
+# Fetch a chunk by ID
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db chunk 4821
+
+# Heading outline for a file (browse before fetching full content)
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db outline "CharacterBody2D.xml" --corpus godot
+
+# List all corpora in the DB
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db corpuses
+
+# List all parsed files
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db files --corpus godot
+
+# Semantically similar chunks (requires embeddings)
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db related 4821 --limit 5
+```
 
 ## Typical agent workflow
 
 ```bash
-# 1. Confirm what corpora are available
-uv run scripts/docs.py corpuses
+cd ~/.claude/skills/docs-reading
 
-# 2. Search — always pass --corpus (and --version if multiple versions exist)
+# 1. Search — always pass --corpus (and --version if multiple versions exist)
 #    Without a filter, results from different versions mix and may conflict.
-uv run scripts/docs.py search "your query" --corpus mylib --version 1.0
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db search "your query" --corpus mylib --version 1.0
 
-# 3. Browse a file's structure before loading full content
-uv run scripts/docs.py outline "path/to/file.md" --corpus mylib
+# 2. Browse a file's structure before loading full content
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db outline "path/to/file.md" --corpus mylib
 
-# 4. Fetch a specific chunk by ID from search results
-uv run scripts/docs.py chunk 4821
+# 3. Fetch a specific chunk by ID from search results
+uv run scripts/docs.py --db /path/to/skill/dbs/name.db chunk 4821
 ```
 
 ## Dependencies
