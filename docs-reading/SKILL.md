@@ -67,51 +67,49 @@ Where `THAT_SKILL_DIR` is the directory containing the consuming skill's `SKILL.
 
 ## Querying (agent usage)
 
-Run `scripts/docs.py` via Bash from the `docs-reading` skill root. Output is compact JSON. Pass `--pretty` for human-readable output.
+Use `agent-docs-search` — available on `$PATH`. Output is compact JSON. Pass `--pretty` for human-readable output.
 
 `--db` is required. Always pass `--corpus` too (and `--version` if multiple versions exist).
 
 ```bash
-cd ~/.claude/skills/docs-reading
-
 # Search (hybrid FTS5 + semantic, or FTS-only if no embeddings)
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db search "move_and_slide physics" --corpus godot --version 4.6
+agent-docs-search --db /path/to/skill/dbs/name.db search "move_and_slide physics" --corpus godot --version 4.6
 
 # Fetch a chunk by ID
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db chunk 4821
+agent-docs-search --db /path/to/skill/dbs/name.db chunk 4821
 
 # Heading outline for a file (browse before fetching full content)
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db outline "CharacterBody2D.xml" --corpus godot
+agent-docs-search --db /path/to/skill/dbs/name.db outline "CharacterBody2D.xml" --corpus godot
 
 # List all corpora in the DB
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db corpuses
+agent-docs-search --db /path/to/skill/dbs/name.db corpuses
 
 # List all parsed files
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db files --corpus godot
+agent-docs-search --db /path/to/skill/dbs/name.db files --corpus godot
 
 # Semantically similar chunks (requires embeddings)
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db related 4821 --limit 5
+agent-docs-search --db /path/to/skill/dbs/name.db related 4821 --limit 5
 ```
 
 ## Typical agent workflow
 
 ```bash
-cd ~/.claude/skills/docs-reading
-
 # 1. Search — always pass --corpus (and --version if multiple versions exist)
 #    Without a filter, results from different versions mix and may conflict.
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db search "your query" --corpus mylib --version 1.0
+agent-docs-search --db /path/to/skill/dbs/name.db search "your query" --corpus mylib --version 1.0
 
 # 2. Browse a file's structure before loading full content
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db outline "path/to/file.md" --corpus mylib
+agent-docs-search --db /path/to/skill/dbs/name.db outline "path/to/file.md" --corpus mylib
 
 # 3. Fetch a specific chunk by ID from search results
-uv run scripts/docs.py --db /path/to/skill/dbs/name.db chunk 4821
+agent-docs-search --db /path/to/skill/dbs/name.db chunk 4821
 ```
 
 ## Dependencies
 
-Scripts use `uv run` with inline dependency blocks — no install step needed. Just run with `uv run scripts/<script>.py ...` and uv handles the environment automatically.
+**Querying:** `agent-docs-search` is a self-contained binary on `$PATH` — no runtime dependencies.
+
+**Parsing scripts** use `uv run` with inline dependency blocks — no install step needed. Just run with `uv run scripts/<script>.py ...` and uv handles the environment automatically.
 
 Requires `uv` to be installed: https://docs.astral.sh/uv/getting-started/installation/
 

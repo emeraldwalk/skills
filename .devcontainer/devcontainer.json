@@ -5,6 +5,9 @@
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "image": "mcr.microsoft.com/devcontainers/base:noble",
   "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "latest"
+    },
     "ghcr.io/devcontainers/features/node:1": {
       "nodeGypDependencies": true,
       "version": "latest",
@@ -17,6 +20,10 @@
     "TZ": "America/Chicago"
   },
   "mounts": [
+    // Go module and build cache
+    "source=skills-go-cache,target=/home/vscode/go/pkg,type=volume",
+    "source=skills-go-build-cache,target=/root/.cache/go-build,type=volume",
+
     // Isolated Claude settings per worktree
     "source=claude-code-config-${localWorkspaceFolderBasename},target=/home/vscode/.claude,type=volume",
 

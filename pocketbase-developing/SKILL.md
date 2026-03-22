@@ -127,20 +127,18 @@ Add JS hooks in `pb/pb_hooks/` using the `*.pb.js` naming pattern. They hot-relo
 
 PocketBase API docs are indexed in a local SQLite DB. **Before writing any PocketBase code or migrations, search the docs for the relevant API.**
 
-Run all queries from the `docs-reading` skill directory:
-
 ```bash
 # Search (FTS — no embeddings)
-uv run scripts/docs.py --db <this-skill-dir>/dbs/pocketbase.db search "your query" --corpus pocketbase
+agent-docs-search --db <this-skill-dir>/dbs/pocketbase.db search "your query" --corpus pocketbase
 
 # Browse a file's headings
-uv run scripts/docs.py --db <this-skill-dir>/dbs/pocketbase.db outline "go-records.md" --corpus pocketbase
+agent-docs-search --db <this-skill-dir>/dbs/pocketbase.db outline "go-records.md" --corpus pocketbase
 
 # Fetch a chunk by ID (from search results)
-uv run scripts/docs.py --db <this-skill-dir>/dbs/pocketbase.db chunk <id>
+agent-docs-search --db <this-skill-dir>/dbs/pocketbase.db chunk <id>
 
 # List all 50 indexed files
-uv run scripts/docs.py --db <this-skill-dir>/dbs/pocketbase.db files --corpus pocketbase
+agent-docs-search --db <this-skill-dir>/dbs/pocketbase.db files --corpus pocketbase
 ```
 
 Useful file prefixes: `go-*` (Go SDK), `js-*` (JS hooks/migrations), `api-*` (REST API), no prefix (concepts).
