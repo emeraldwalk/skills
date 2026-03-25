@@ -124,6 +124,11 @@ func mustPull(cfg *Config) {
 	}
 	defer db.Close()
 
+	// Clear any existing data for today before re-inserting
+	if err := db.DeleteSnapshotData(today); err != nil {
+		fatalf("clear snapshot data: %v", err)
+	}
+
 	// GA4
 	fmt.Println("→ Fetching GA4 data...")
 	ga4Start, ga4End := ga4.DateRange(cfg.LookbackDays)

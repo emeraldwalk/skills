@@ -107,6 +107,21 @@ type Snapshot struct {
 	TotalRevenue     float64
 }
 
+func (db *DB) DeleteSnapshotData(snapshotDate string) error {
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM ga4_pages WHERE snapshot_date = ?`, snapshotDate); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM gsc_queries WHERE snapshot_date = ?`, snapshotDate); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (db *DB) InsertGA4Pages(pages []GA4Page) error {
 	tx, err := db.conn.Begin()
 	if err != nil {
