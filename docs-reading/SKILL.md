@@ -8,7 +8,7 @@ description: Parses technical documentation corpora (Markdown or Godot XML) into
 docs-reading is a two-phase pipeline:
 
 1. **Parse** — A human runs a parser script once to ingest documentation into a local SQLite database with FTS5 full-text search and optional sentence-embedding vectors. Multiple corpora and versions can coexist in a single DB.
-2. **Query** — Claude calls `scripts/docs.py` directly via Bash to search, browse, and retrieve documentation without loading the raw files into context.
+2. **Query** — Claude calls `agent-docs-search` (a self-contained binary on `$PATH`) to search, browse, and retrieve documentation without loading the raw files into context.
 
 ## Parsing (human setup step)
 
@@ -67,28 +67,37 @@ Where `THAT_SKILL_DIR` is the directory containing the consuming skill's `SKILL.
 
 ## Querying (agent usage)
 
-Use `agent-docs-search` — available on `$PATH`. Output is compact JSON. Pass `--pretty` for human-readable output.
+Use `agent-docs-search` — available on `$PATH`. Output format is controlled by `--format`:
+
+| Format | Description |
+|--------|-------------|
+| `json` | Compact JSON (default) |
+| `json-pretty` | Indented JSON |
+| `text` | Plain text — agent-friendly, no parsing needed |
+| `markdown` | Structured markdown with headers |
 
 `--db` is required. Always pass `--corpus` too (and `--version` if multiple versions exist).
 
+For agent use, prefer `--format text` or `--format markdown` to avoid inline parsing of JSON.
+
 ```bash
 # Search (hybrid FTS5 + semantic, or FTS-only if no embeddings)
-agent-docs-search --db /path/to/skill/dbs/name.db search "move_and_slide physics" --corpus godot --version 4.6
+agent-docs-search --db /path/to/skill/dbs/name.db --format text search "move_and_slide physics" --corpus godot --version 4.6
 
 # Fetch a chunk by ID
-agent-docs-search --db /path/to/skill/dbs/name.db chunk 4821
+agent-docs-search --db /path/to/skill/dbs/name.db --format text chunk 4821
 
 # Heading outline for a file (browse before fetching full content)
-agent-docs-search --db /path/to/skill/dbs/name.db outline "CharacterBody2D.xml" --corpus godot
+agent-docs-search --db /path/to/skill/dbs/name.db --format text outline "CharacterBody2D.xml" --corpus godot
 
 # List all corpora in the DB
-agent-docs-search --db /path/to/skill/dbs/name.db corpuses
+agent-docs-search --db /path/to/skill/dbs/name.db --format text corpuses
 
 # List all parsed files
-agent-docs-search --db /path/to/skill/dbs/name.db files --corpus godot
+agent-docs-search --db /path/to/skill/dbs/name.db --format text files --corpus godot
 
 # Semantically similar chunks (requires embeddings)
-agent-docs-search --db /path/to/skill/dbs/name.db related 4821 --limit 5
+agent-docs-search --db /path/to/skill/dbs/name.db --format text related 4821 --limit 5
 ```
 
 ## Typical agent workflow

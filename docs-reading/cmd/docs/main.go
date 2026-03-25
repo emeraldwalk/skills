@@ -9,7 +9,12 @@
 //	files                     List all parsed files
 //	related  <id>             Semantically similar chunks (requires embeddings)
 //
-// Output is compact JSON by default. Pass --pretty for human-readable output.
+// Output format is controlled by --format:
+//
+//	json         Compact JSON (default)
+//	json-pretty  Indented JSON
+//	text         Plain text, agent-friendly (no parsing needed)
+//	markdown     Structured markdown with headers and code blocks
 package main
 
 import (
@@ -34,18 +39,97 @@ func die(msg string) {
 	os.Exit(1)
 }
 
-func out(v any, pretty bool) {
-	var b []byte
-	var err error
-	if pretty {
-		b, err = json.MarshalIndent(v, "", "  ")
-	} else {
-		b, err = json.Marshal(v)
+func out(v any, format string) {
+	switch format {
+	case "json-pretty":
+		b, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			die(err.Error())
+		}
+		fmt.Println(string(b))
+	case "text":
+		fmt.Print(renderText(v))
+	case "markdown":
+		fmt.Print(renderMarkdown(v))
+	default: // "json"
+		b, err := json.Marshal(v)
+		if err != nil {
+			die(err.Error())
+		}
+		fmt.Println(string(b))
 	}
-	if err != nil {
-		die(err.Error())
+}
+
+func renderText(v any) string {
+	var sb strings.Builder
+	switch val := v.(type) {
+	case []searchResult:
+		for i, r := range val {
+			fmt.Fprintf(&sb, "[%d] %s (score: %.3f)\n", i+1, r.HeadingPath, r.Score)
+			fmt.Fprintf(&sb, "    File: %s | Corpus: %s %s | ID: %d\n", r.SourceFile, r.CorpusName, r.CorpusVersion, r.ID)
+			fmt.Fprintf(&sb, "%s\n\n", r.Content)
+		}
+	case chunkResult:
+		fmt.Fprintf(&sb, "%s\n", val.HeadingPath)
+		fmt.Fprintf(&sb, "File: %s | Corpus: %s %s | ID: %d\n\n", val.SourceFile, val.CorpusName, val.CorpusVersion, val.ID)
+		fmt.Fprintf(&sb, "%s\n", val.Content)
+	case []outlineEntry:
+		for _, e := range val {
+			indent := strings.Repeat("  ", e.HeadingLevel-1)
+			fmt.Fprintf(&sb, "%s%s (id:%d, tokens:%d)\n", indent, e.HeadingPath, e.ID, e.TokenCount)
+		}
+	case []corpusEntry:
+		for _, c := range val {
+			fmt.Fprintf(&sb, "%s %s — %d files, %d chunks (created: %s)\n", c.Name, c.Version, c.FileCount, c.ChunkCount, c.CreatedAt)
+		}
+	case []fileEntry:
+		for _, f := range val {
+			fmt.Fprintf(&sb, "%s/%s — %d chunks (parsed: %s)\n", f.CorpusName, f.RelPath, f.ChunkCount, f.ParsedAt)
+		}
+	default:
+		b, _ := json.MarshalIndent(v, "", "  ")
+		sb.Write(b)
+		sb.WriteByte('\n')
 	}
-	fmt.Println(string(b))
+	return sb.String()
+}
+
+func renderMarkdown(v any) string {
+	var sb strings.Builder
+	switch val := v.(type) {
+	case []searchResult:
+		for i, r := range val {
+			fmt.Fprintf(&sb, "## %d. %s\n\n", i+1, r.HeadingPath)
+			fmt.Fprintf(&sb, "**File:** `%s` | **Corpus:** %s %s | **ID:** %d | **Score:** %.3f\n\n", r.SourceFile, r.CorpusName, r.CorpusVersion, r.ID, r.Score)
+			fmt.Fprintf(&sb, "%s\n\n---\n\n", r.Content)
+		}
+	case chunkResult:
+		fmt.Fprintf(&sb, "# %s\n\n", val.HeadingPath)
+		fmt.Fprintf(&sb, "**File:** `%s` | **Corpus:** %s %s | **ID:** %d\n\n", val.SourceFile, val.CorpusName, val.CorpusVersion, val.ID)
+		fmt.Fprintf(&sb, "%s\n", val.Content)
+	case []outlineEntry:
+		fmt.Fprintf(&sb, "# Outline\n\n")
+		for _, e := range val {
+			prefix := strings.Repeat("  ", e.HeadingLevel-1) + "-"
+			fmt.Fprintf(&sb, "%s **%s** `id:%d` (%d tokens)\n", prefix, e.HeadingPath, e.ID, e.TokenCount)
+		}
+	case []corpusEntry:
+		fmt.Fprintf(&sb, "# Corpora\n\n")
+		for _, c := range val {
+			fmt.Fprintf(&sb, "- **%s** %s — %d files, %d chunks\n", c.Name, c.Version, c.FileCount, c.ChunkCount)
+		}
+	case []fileEntry:
+		fmt.Fprintf(&sb, "# Files\n\n")
+		for _, f := range val {
+			fmt.Fprintf(&sb, "- `%s/%s` — %d chunks\n", f.CorpusName, f.RelPath, f.ChunkCount)
+		}
+	default:
+		b, _ := json.MarshalIndent(v, "", "  ")
+		sb.WriteString("```json\n")
+		sb.Write(b)
+		sb.WriteString("\n```\n")
+	}
+	return sb.String()
 }
 
 func openDB(path string) *sql.DB {
@@ -609,7 +693,13 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `docs — query parsed documentation databases
 
 Usage:
-  docs --db <path> [--pretty] <command> [args]
+  docs --db <path> [--format <fmt>] <command> [args]
+
+Formats:
+  json         Compact JSON (default)
+  json-pretty  Indented JSON
+  text         Plain text (agent-friendly, no parsing needed)
+  markdown     Structured markdown
 
 Commands:
   search   <query> [--corpus <name>] [--version <ver>] [--limit <n>]
@@ -625,12 +715,17 @@ func main() {
 	// Global flags
 	globalFlags := flag.NewFlagSet("docs", flag.ContinueOnError)
 	dbPath := globalFlags.String("db", "", "Path to SQLite database (required)")
-	pretty := globalFlags.Bool("pretty", false, "Pretty-print JSON output")
+	format := globalFlags.String("format", "json", "Output format: json, json-pretty, text, markdown")
 	if err := globalFlags.Parse(os.Args[1:]); err != nil || globalFlags.NArg() == 0 {
 		usage()
 	}
 	if *dbPath == "" {
 		die("--db is required. Pass the path to your SQLite database.")
+	}
+	switch *format {
+	case "json", "json-pretty", "text", "markdown":
+	default:
+		die(fmt.Sprintf("unknown format %q — must be json, json-pretty, text, or markdown", *format))
 	}
 
 	remaining := globalFlags.Args()
@@ -650,7 +745,7 @@ func main() {
 		if fs.NArg() < 1 {
 			die("search requires a query argument")
 		}
-		out(cmdSearch(db, fs.Arg(0), *corpus, *version, *limit), *pretty)
+		out(cmdSearch(db, fs.Arg(0), *corpus, *version, *limit), *format)
 
 	case "chunk":
 		fs := flag.NewFlagSet("chunk", flag.ExitOnError)
@@ -660,7 +755,7 @@ func main() {
 		}
 		var id int64
 		fmt.Sscan(fs.Arg(0), &id)
-		out(cmdChunk(db, id), *pretty)
+		out(cmdChunk(db, id), *format)
 
 	case "outline":
 		fs := flag.NewFlagSet("outline", flag.ExitOnError)
@@ -670,17 +765,17 @@ func main() {
 		if fs.NArg() < 1 {
 			die("outline requires a source_file argument")
 		}
-		out(cmdOutline(db, fs.Arg(0), *corpus, *version), *pretty)
+		out(cmdOutline(db, fs.Arg(0), *corpus, *version), *format)
 
 	case "corpuses":
-		out(cmdCorpuses(db), *pretty)
+		out(cmdCorpuses(db), *format)
 
 	case "files":
 		fs := flag.NewFlagSet("files", flag.ExitOnError)
 		corpus := fs.String("corpus", "", "Filter to corpus name")
 		version := fs.String("version", "", "Filter to corpus version")
 		fs.Parse(cmdArgs)
-		out(cmdFiles(db, *corpus, *version), *pretty)
+		out(cmdFiles(db, *corpus, *version), *format)
 
 	case "related":
 		fs := flag.NewFlagSet("related", flag.ExitOnError)
@@ -691,7 +786,7 @@ func main() {
 		}
 		var id int64
 		fmt.Sscan(fs.Arg(0), &id)
-		out(cmdRelated(db, id, *limit), *pretty)
+		out(cmdRelated(db, id, *limit), *format)
 
 	default:
 		die(fmt.Sprintf("unknown command: %s", cmd))
