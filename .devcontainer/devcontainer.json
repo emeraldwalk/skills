@@ -41,7 +41,7 @@
     "source=${localWorkspaceFolder}/.devcontainer/.gitignore,target=${containerWorkspaceFolder}/.claude/.gitignore,type=bind,consistency=cached",
 
     // Bind-mount tasks from host into project directory
-    "source=${localEnv:HOME}/.tasks,target=${containerWorkspaceFolder}/.tasks,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.tasks/skills,target=${containerWorkspaceFolder}/.tasks,type=bind,consistency=cached",
 
     // We don't want to commit files from mounted folder to primary repo
     "source=${localWorkspaceFolder}/.devcontainer/.gitignore,target=${containerWorkspaceFolder}/.tasks/.gitignore,type=bind,consistency=cached"
