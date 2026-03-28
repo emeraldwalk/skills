@@ -267,7 +267,6 @@ completed_count=0
 
 while [[ "$RUN_ALL" -eq 1 || "$completed_count" -lt "$MAX_TASKS" ]]; do
   log "---"
-  log "Iteration $((completed_count + 1)) of ${TOTAL_TASKS}"
 
   # Claim next available task
   task_json=$(bash "$TASK_TRACKING" next "$LIST_ID" --claim "$claim_id" 2>&1) || {
@@ -283,6 +282,7 @@ while [[ "$RUN_ALL" -eq 1 || "$completed_count" -lt "$MAX_TASKS" ]]; do
 
   task_id=$(echo "$task_json" | jq -r '.id')
   task_desc=$(echo "$task_json" | jq -r '.description')
+  log "Iteration $((completed_count + 1)) of ${TOTAL_TASKS}"
   log "Claimed task: ${task_id} — ${task_desc}"
 
   # Set up log file: .tasks/logs/<list-id>/<task-id>_agent.log
