@@ -15,13 +15,15 @@ Task management and tracking skill for agent workflows. See [SKILL.md](SKILL.md)
 Orchestrates sequential task execution by claiming tasks and delegating each to an agent CLI. Run from your **project root** (the directory containing `.tasks/`).
 
 ```bash
-bash <path-to-skill>/scripts/run_task_loop.sh <list-id> <max-tasks> <cli>
+bash <path-to-skill>/scripts/run_task_loop.sh <list-id> [--agent <cli>] [-n <max-tasks>]
 ```
 
 **Arguments:**
 - `<list-id>` — task list to process
-- `<max-tasks>` — stop after this many successfully completed tasks, or `all` to run until no pending tasks remain
-- `<cli>` — agent to use: `claude`, `copilot`, or `mock`
+
+**Options:**
+- `--agent <cli>` — agent to use: `claude`, `copilot`, or `mock` (default: `claude`)
+- `-n <max-tasks>` — stop after this many successfully completed tasks (default: run until no pending tasks remain)
 
 **What it does per task:**
 1. Claims the next available task (`next --claim`)
@@ -39,7 +41,7 @@ bash <path-to-skill>/scripts/run_task_loop.sh <list-id> <max-tasks> <cli>
 For testing without a real agent:
 
 ```bash
-bash <path-to-skill>/scripts/run_task_loop.sh my-list 3 mock
+bash <path-to-skill>/scripts/run_task_loop.sh my-list --agent mock -n 3
 ```
 
 `mock_agent.sh` marks each task completed and dumps the full prompt it received to the log. Git operations are printed as dry-run only — nothing is staged or committed.
@@ -52,14 +54,14 @@ bash <path-to-skill>/scripts/run_task_loop.sh my-list 3 mock
 
 ```bash
 # Happy path — 3 tasks completed
-bash <path-to-skill>/scripts/run_task_loop.sh my-list 3 mock
+bash <path-to-skill>/scripts/run_task_loop.sh my-list --agent mock -n 3
 
 # Run all pending tasks (no limit)
-bash <path-to-skill>/scripts/run_task_loop.sh my-list all mock
+bash <path-to-skill>/scripts/run_task_loop.sh my-list --agent mock
 
 # Simulate failure on first task
-MOCK_AGENT_FAIL=1 bash <path-to-skill>/scripts/run_task_loop.sh my-list 3 mock
+MOCK_AGENT_FAIL=1 bash <path-to-skill>/scripts/run_task_loop.sh my-list --agent mock -n 3
 
 # Slow agent
-MOCK_AGENT_DELAY=2 bash <path-to-skill>/scripts/run_task_loop.sh my-list 3 mock
+MOCK_AGENT_DELAY=2 bash <path-to-skill>/scripts/run_task_loop.sh my-list --agent mock -n 3
 ```

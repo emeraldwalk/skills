@@ -2,12 +2,15 @@
 # run_task_loop.sh — Orchestrate sequential task execution from a task list.
 #
 # Usage:
-#   run_task_loop.sh <list-id> <max-tasks> <cli>
+#   run_task_loop.sh <list-id> [--agent <cli>] [-n <max-tasks>]
 #
 # Arguments:
 #   list-id    Task list name (e.g. "my-sprint")
-#   max-tasks  Maximum number of tasks to execute (integer), or "all" to run until no tasks remain
-#   cli        Agent CLI to use: "claude", "copilot", or "mock" (for testing)
+#
+# Options:
+#   --agent <cli>   Agent CLI to use: "claude", "copilot", or "mock". Default: claude.
+#   -n <max-tasks>  Maximum number of tasks to execute (integer >= 1).
+#                   Defaults to "all" (run until no tasks remain).
 #
 # Environment:
 #   TASKS_DIR  Override the .tasks directory location (optional)
@@ -31,34 +34,65 @@ TASK_TRACKING="${SCRIPT_DIR}/task_tracking.sh"
 # ---------------------------------------------------------------------------
 usage() {
   cat <<'USAGE'
-Usage: run_task_loop.sh <list-id> <max-tasks> <cli>
+Usage: run_task_loop.sh <list-id> [--agent <cli>] [-n <max-tasks>]
 
 Arguments:
   list-id    Task list name
-  max-tasks  Max number of tasks to execute (integer >= 1), or "all" to run until no tasks remain
-  cli        Agent CLI: "claude", "copilot", or "mock"
+
+Options:
+  --agent <cli>   Agent CLI: "claude", "copilot", or "mock". Default: claude.
+  -n <max-tasks>  Max number of tasks to execute (integer >= 1). Default: all.
 
 Environment:
   TASKS_DIR  Override the .tasks directory location (optional)
 USAGE
 }
 
-if [[ $# -ne 3 ]]; then
-  echo "Error: Expected 3 arguments, got $#."
+if [[ $# -lt 1 ]]; then
+  echo "Error: Expected at least 1 argument, got $#."
   usage
   exit 1
 fi
 
 LIST_ID="$1"
-MAX_TASKS="$2"
-CLI="$3"
+shift
+
+CLI="claude"
+MAX_TASKS="all"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --agent)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --agent requires an argument."
+        usage
+        exit 1
+      fi
+      CLI="$2"
+      shift 2
+      ;;
+    -n)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: -n requires an argument."
+        usage
+        exit 1
+      fi
+      MAX_TASKS="$2"
+      shift 2
+      ;;
+    *)
+      echo "Error: Unknown argument: $1"
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 if [[ "$MAX_TASKS" == "all" ]]; then
   RUN_ALL=1
 elif [[ "$MAX_TASKS" =~ ^[1-9][0-9]*$ ]]; then
   RUN_ALL=0
 else
-  echo "Error: max-tasks must be a positive integer or 'all', got: ${MAX_TASKS}"
+  echo "Error: -n value must be a positive integer, got: ${MAX_TASKS}"
   exit 1
 fi
 
