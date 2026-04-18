@@ -1,0 +1,7 @@
+# PocketBase data and runtime files
+pb/pb_data/
+pb/.pid
+pb/server.log
+
+# Local environment (contains secrets)
+.env.*

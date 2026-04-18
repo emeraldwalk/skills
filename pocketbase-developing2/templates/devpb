@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -e
+
+# Find .env.<id> by traversing up from this script's directory
+env_id="local"
+for arg in "$@"; do
+  if [[ "$arg" == --env=* ]]; then
+    env_id="${arg#--env=}"
+  fi
+done
+
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+env_file=""
+while [[ "$dir" != "/" ]]; do
+  if [[ -f "$dir/.env.$env_id" ]]; then
+    env_file="$dir/.env.$env_id"
+    break
+  fi
+  dir="$(dirname "$dir")"
+done
+
+if [[ -z "$env_file" ]]; then
+  echo "Error: .env.$env_id not found in $( cd "$(dirname "${BASH_SOURCE[0]}")" && pwd) or any ancestor" >&2
+  exit 1
+fi
+
+PB_PORT=$(grep -E '^PB_PORT=' "$env_file" | cut -d= -f2-)
+
+pid=$(lsof -ti :$PB_PORT || true)
+if [[ -n "$pid" ]]; then
+  kill -9 $pid
+fi
+
+pushd pb
+go run . serve --http localhost:$PB_PORT "$@"

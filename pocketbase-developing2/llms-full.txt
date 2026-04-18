@@ -1,0 +1,65 @@
+# PocketBase Documentation
+
+PocketBase is an open source backend with an embedded SQLite database, realtime subscriptions, built-in auth management, admin dashboard UI, and a REST-ish API. It can be used as a standalone app or as a Go framework.
+
+## Concepts
+
+- [Introduction & Overview](references/pocketbase-docs/index.md): What PocketBase is and how to get started
+- [How to Use](references/pocketbase-docs/how-to-use.md): Basic usage patterns
+- [Use as Framework](references/pocketbase-docs/use-as-framework.md): Embedding PocketBase in a Go application
+- [Collections](references/pocketbase-docs/collections.md): Collection types (base, auth, view) and configuration
+- [Authentication](references/pocketbase-docs/authentication.md): Auth methods, OAuth2, OTP, MFA
+- [Files Handling](references/pocketbase-docs/files-handling.md): File upload, storage, and retrieval
+- [Working with Relations](references/pocketbase-docs/working-with-relations.md): Relation fields and expand
+- [Going to Production](references/pocketbase-docs/going-to-production.md): TLS, reverse proxy, deployment
+
+## Go SDK
+
+- [Go Overview](references/pocketbase-docs/go-overview.md): Go framework entry point and app lifecycle
+- [Go Collections](references/pocketbase-docs/go-collections.md): Managing collections programmatically
+- [Go Records](references/pocketbase-docs/go-records.md): CRUD operations on records
+- [Go Record Proxy](references/pocketbase-docs/go-record-proxy.md): Type-safe record access
+- [Go Database](references/pocketbase-docs/go-database.md): Raw DB access, queries, transactions
+- [Go Migrations](references/pocketbase-docs/go-migrations.md): Go migration API
+- [Go Event Hooks](references/pocketbase-docs/go-event-hooks.md): Hooking into app lifecycle and request events
+- [Go Routing](references/pocketbase-docs/go-routing.md): Custom routes and middleware
+- [Go Filesystem](references/pocketbase-docs/go-filesystem.md): File storage backends (local, S3)
+- [Go Jobs Scheduling](references/pocketbase-docs/go-jobs-scheduling.md): Cron-style scheduled tasks
+- [Go Realtime](references/pocketbase-docs/go-realtime.md): Server-sent events and realtime subscriptions
+- [Go Rendering Templates](references/pocketbase-docs/go-rendering-templates.md): HTML template rendering
+- [Go Sending Emails](references/pocketbase-docs/go-sending-emails.md): Email configuration and sending
+- [Go Logging](references/pocketbase-docs/go-logging.md): Structured logging
+- [Go Miscellaneous](references/pocketbase-docs/go-miscellaneous.md): Security, tokens, URL helpers
+- [Go Console Commands](references/pocketbase-docs/go-console-commands.md): Custom CLI subcommands
+- [Go Testing](references/pocketbase-docs/go-testing.md): Testing PocketBase apps
+
+## JS Hooks & Migrations
+
+- [JS Overview](references/pocketbase-docs/js-overview.md): JSVM runtime, globals, and limitations
+- [JS Collections](references/pocketbase-docs/js-collections.md): Managing collections in JS
+- [JS Records](references/pocketbase-docs/js-records.md): CRUD operations in JS
+- [JS Database](references/pocketbase-docs/js-database.md): Raw DB queries in JS
+- [JS Migrations](references/pocketbase-docs/js-migrations.md): JS migration API (collection creation, modification, seeding)
+- [JS Event Hooks](references/pocketbase-docs/js-event-hooks.md): Hooking into app events in JS
+- [JS Routing](references/pocketbase-docs/js-routing.md): Custom routes in JS hooks
+- [JS Filesystem](references/pocketbase-docs/js-filesystem.md): File access in JS
+- [JS Jobs Scheduling](references/pocketbase-docs/js-jobs-scheduling.md): Scheduled tasks in JS
+- [JS Realtime](references/pocketbase-docs/js-realtime.md): Realtime subscriptions in JS
+- [JS Rendering Templates](references/pocketbase-docs/js-rendering-templates.md): Template rendering in JS
+- [JS Sending Emails](references/pocketbase-docs/js-sending-emails.md): Email sending in JS
+- [JS Sending HTTP Requests](references/pocketbase-docs/js-sending-http-requests.md): Outbound HTTP in JS hooks
+- [JS Logging](references/pocketbase-docs/js-logging.md): Logging in JS
+- [JS Console Commands](references/pocketbase-docs/js-console-commands.md): Custom CLI commands in JS
+
+## REST API Reference
+
+- [API Records](references/pocketbase-docs/api-records.md): CRUD endpoints for records
+- [API Collections](references/pocketbase-docs/api-collections.md): Collection management endpoints
+- [API Files](references/pocketbase-docs/api-files.md): File upload and retrieval endpoints
+- [API Realtime](references/pocketbase-docs/api-realtime.md): SSE subscription endpoint
+- [API Settings](references/pocketbase-docs/api-settings.md): App settings endpoints
+- [API Logs](references/pocketbase-docs/api-logs.md): Request log endpoints
+- [API Crons](references/pocketbase-docs/api-crons.md): Cron job endpoints
+- [API Backups](references/pocketbase-docs/api-backups.md): Backup management endpoints
+- [API Health](references/pocketbase-docs/api-health.md): Health check endpoint
+- [API Rules & Filters](references/pocketbase-docs/api-rules-and-filters.md): Collection rule syntax and filter expressions
