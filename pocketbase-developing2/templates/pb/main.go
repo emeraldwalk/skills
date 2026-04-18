@@ -14,7 +14,17 @@ import (
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 )
 
-// findAndLoadEnv traverses up from dir looking for .env.<id> and loads it into the environment.
+// envVars lists env vars loaded from .env.<id> into the process environment.
+// Add entries here when main.go needs access to new variables.
+var envVars = []string{
+	"PB_PORT",
+	"PB_ADMIN_EMAIL",
+	"PB_ADMIN_PASSWORD",
+	"PB_TLS_CERT",
+	"PB_TLS_KEY",
+}
+
+// findAndLoadEnv traverses up from dir looking for .env.<id> and loads envVars from it.
 func findAndLoadEnv(dir, id string) {
 	filename := ".env." + id
 	for {
@@ -22,6 +32,7 @@ func findAndLoadEnv(dir, id string) {
 		f, err := os.Open(path)
 		if err == nil {
 			defer f.Close()
+			vals := make(map[string]string)
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := strings.TrimSpace(scanner.Text())
@@ -32,7 +43,12 @@ func findAndLoadEnv(dir, id string) {
 				if !ok {
 					continue
 				}
-				os.Setenv(strings.TrimSpace(key), strings.TrimSpace(val))
+				vals[strings.TrimSpace(key)] = strings.TrimSpace(val)
+			}
+			for _, key := range envVars {
+				if val, ok := vals[key]; ok {
+					os.Setenv(key, val)
+				}
 			}
 			return
 		}
