@@ -74,8 +74,8 @@ func main() {
 		log.Fatal(err)
 	}
 	startDir := filepath.Dir(exe)
-	// When running via `go run`, the executable is in a temp dir; use cwd instead.
-	if strings.HasPrefix(exe, os.TempDir()) {
+	// When running via `go run`, the executable is in a go-build cache dir; use cwd instead.
+	if strings.Contains(exe, "go-build") {
 		startDir, _ = os.Getwd()
 	}
 	findAndLoadEnv(startDir, envID)
@@ -83,7 +83,7 @@ func main() {
 	app := pocketbase.New()
 
 	// Enable automigrate only during development (go run)
-	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
+	isGoRun := strings.Contains(os.Args[0], "go-build")
 
 	jsvm.MustRegister(app, jsvm.Config{
 		MigrationsDir: "pb_migrations",
