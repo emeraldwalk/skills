@@ -1,8 +1,6 @@
 # SolidJS PWA Scaffold — Implementation Notes
 
-Written based on iot-garden project.
-
-These notes capture real-world findings from setting up a plain SolidJS + Vite + vite-plugin-pwa project in this repo. A skill author should read this alongside the actual files in `pwa/` to understand what works and why.
+Real-world pitfalls for setting up a plain SolidJS + Vite + vite-plugin-pwa project. Read this before scaffolding a new PWA so these mistakes aren't repeated.
 
 ---
 
@@ -14,15 +12,7 @@ The SolidJS Vite plugin npm package is **`vite-plugin-solid`**, not `vite-plugin
 import solid from 'vite-plugin-solid'
 ```
 
-Versions confirmed working (May 2026):
-
-- `vite-plugin-solid`: `^2.11.12`
-- `vite`: `^6.x`
-- `vite-plugin-pwa`: `^0.21.x`
-- `@vite-pwa/assets-generator`: `^0.2.6`
-- `solid-js`: `^1.9.5`
-- `oxlint`: `^0.16.x`
-- `typescript`: `^5.8.x`
+Install the latest stable versions of `vite-plugin-solid`, `vite`, `vite-plugin-pwa`, `@vite-pwa/assets-generator`, `solid-js`, and `typescript` unless the project pins specific versions — check each package's changelog if a pitfall below looks version-dependent.
 
 ---
 
@@ -101,31 +91,17 @@ Also include `"typescript"` in plugins for TypeScript-aware rules.
 
 ---
 
-## What a skill should do
+## Scaffolding checklist
 
-A SolidJS PWA scaffold skill should:
+When scaffolding a new SolidJS PWA project:
 
-1. Read the project plan (or take arguments) to determine app name, theme color, and any project-specific config.
-2. Create `pwa/` with the structure in `pwa/` of this repo as the canonical example.
-3. Run `npm install` inside `pwa/`.
-4. Create `public/logo.svg` if it doesn't exist (placeholder: green circle).
-5. Run `npm run generate-pwa-assets` to produce PNG/ICO files.
-6. Update `index.html` apple-touch-icon link to the actual generated filename (`apple-touch-icon-180x180.png` for minimal-2023 preset).
-7. Run `npm run build` — must pass.
-8. Run `npm run lint` — must pass with zero errors.
-9. Run `npx tsc --noEmit` — must pass.
-10. Append `pwa/node_modules/`, `pwa/dist/`, `pwa/dev-dist/`, `pwa/.vite/` to root `.gitignore`.
-
----
-
-## Files to use as canonical references
-
-All files are in `/workspaces/iot-garden/pwa/`. Read these before writing a skill:
-
-- [pwa/package.json](../pwa/package.json) — exact deps and scripts
-- [pwa/vite.config.ts](../pwa/vite.config.ts) — plugin config
-- [pwa/tsconfig.json](../pwa/tsconfig.json) — strict TS config without WebWorker
-- [pwa/.oxlintrc.json](../pwa/.oxlintrc.json) — OXC config with ignorePatterns
-- [pwa/index.html](../pwa/index.html) — iOS meta tags + correct apple-touch-icon filename
-- [pwa/src/index.tsx](../pwa/src/index.tsx) — render root
-- [pwa/src/App.tsx](../pwa/src/App.tsx) — minimal root component
+- [ ] Determine app name, theme color, and any project-specific config (from the project plan or task arguments).
+- [ ] Create the project directory with `package.json`, `vite.config.ts`, `tsconfig.json`, lint config, `index.html`, and a minimal `src/index.tsx` + `src/App.tsx`.
+- [ ] Run `npm install`.
+- [ ] Create `public/logo.svg` if it doesn't exist (placeholder is fine).
+- [ ] Run the PWA asset generator to produce PNG/ICO files (see output naming table above).
+- [ ] Update the `index.html` apple-touch-icon link to match the actual generated filename.
+- [ ] Run the build — must pass.
+- [ ] Run the linter — must pass with zero errors.
+- [ ] Run the TypeScript checker (`tsc --noEmit`) — must pass.
+- [ ] Add the project's `node_modules/`, `dist/`, `dev-dist/`, and `.vite/` to `.gitignore`.
